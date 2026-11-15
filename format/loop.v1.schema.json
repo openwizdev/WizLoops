@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "wizloops.loop.v1",
+  "title": "wizloops.loop.v1",
+  "description": "The parsed frontmatter of a WizLoops loop file, v1. Structure only: the frontmatter subset, duplicate keys, the check file, the body, placeholders and folders are checked as format/loop.v1.md says, and that contract holds where the two differ.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "trigger", "thread"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]*[^\\s\\u0000-\\u001f\\u007f][^\\u0000-\\u001f\\u007f]*$"
+    },
+    "trigger": {
+      "oneOf": [
+        { "$ref": "#/$defs/cronTrigger" },
+        { "$ref": "#/$defs/atTrigger" },
+        { "$ref": "#/$defs/inTrigger" },
+        { "$ref": "#/$defs/webhookTrigger" }
+      ]
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run", "timeout"],
+      "properties": {
+        "run": {
+          "type": "string",
+          "pattern": "^(?!\\.{1,2}(/|$))[^/\\\\]+(/(?!\\.{1,2}(/|$))[^/\\\\]+)*$"
+        },
+        "timeout": { "type": "integer", "minimum": 1, "maximum": 900 }
+      }
+    },
+    "thread": { "enum": ["same", "new"] },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "model", "reasoning"],
+      "properties": {
+        "provider": { "$ref": "#/$defs/agentValue" },
+        "model": { "$ref": "#/$defs/agentValue" },
+        "reasoning": { "$ref": "#/$defs/agentValue" }
+      }
+    },
+    "secrets": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^([A-Z][A-Z0-9_]*|\\.env)$"
+      },
+      "default": []
+    },
+    "priority": { "type": "integer", "minimum": 1, "maximum": 4, "default": 3 },
+    "params": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+      "additionalProperties": {
+        "type": ["string", "integer"]
+      },
+      "default": {}
+    }
+  },
+  "$defs": {
+    "cronTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cron", "timezone"],
+      "properties": {
+        "cron": {
+          "type": "string",
+          "pattern": "^[0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+ [0-9*/,-]+$"
+        },
+        "timezone": {
+          "type": "string",
+          "pattern": "^(UTC|[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+)+)$"
+        }
+      }
+    },
+    "atTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["at"],
+      "properties": {
+        "at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})$"
+        }
+      }
+    },
+    "inTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["in"],
+      "properties": {
+        "in": { "type": "string", "pattern": "^[1-9][0-9]*[mhd]$" }
+      }
+    },
+    "webhookTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["webhook"],
+      "properties": {
+        "webhook": { "const": true }
+      }
+    },
+    "agentValue": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+    }
+  }
+}
