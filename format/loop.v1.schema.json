@@ -6,6 +6,8 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "name", "trigger", "thread"],
+  "if": { "properties": { "thread": { "const": "same" } }, "required": ["thread"] },
+  "then": { "properties": { "secrets": { "maxItems": 0 } } },
   "properties": {
     "id": {
       "type": "string",

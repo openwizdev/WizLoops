@@ -2,7 +2,7 @@
 id: "cron-check"
 name: "Example triage every ten minutes"
 trigger: {"cron": "*/10 * * * *", "timezone": "UTC"}
-check: {"run": "cron-check/check.sh", "timeout": 50}
+check: {"run": "cron-check/check.sh", "timeout": 60}
 thread: "new"
 agent: {"provider": "example-provider", "model": "example-model", "reasoning": "medium"}
 secrets: ["EXAMPLE_TOKEN", ".env"]

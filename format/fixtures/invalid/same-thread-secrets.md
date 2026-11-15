@@ -1,7 +1,7 @@
 ---
 id: "same-thread-secrets"
-name: "Same thread with a secret"
-trigger: {"cron": "30 8 * * 1-5", "timezone": "UTC"}
+name: "Example loop"
+trigger: {"cron": "0 9 * * 1", "timezone": "UTC"}
 thread: "same"
 secrets: ["EXAMPLE_TOKEN"]
 ---

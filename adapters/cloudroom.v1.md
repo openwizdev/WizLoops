@@ -30,12 +30,55 @@ the loop's name, as a **marker** at its end:
 - **Read back:** a name that ends with one space and `[wizloop:<id>]`, where
   `<id>` is a valid loop id, is the loop with that id; its `name` is the
   part before the space. Any other loop is **unmanaged**: plan and apply
-  never change it, and plan lists it as unmanaged.
+  never change it, and plan lists it as unmanaged, unless the caller adopts
+  it (below).
 - **Scope:** `room-cli loop list` returns every loop on the account. The
   adapter reads only the loops whose `project_id` is the project it applies
   to; ids are unique there, as they are in one folder.
 - **One loop per id:** two loops in that project with the same marker are
   refused (`cf-duplicate-marker`); the adapter changes neither.
+
+### Adopting an unmarked loop
+
+A loop that was made by hand has no marker. The adapter takes it over only
+when the caller **adopts** it: an explicit binding of one file's `id` to one
+Cloudroom loop `id`, given for that one apply. How the caller passes a
+binding is OpenWiz's CLI contract; the binding is never inferred from a name
+and never stored in a file.
+
+- **What a binding allows:** apply treats the bound loop as that file's
+  managed loop and updates it, adding the marker to its name. It never
+  creates a second loop for that file.
+- **Checked before any write:** the bound loop is in `list`, in this project,
+  and has no marker; no loop in this project already carries the file's
+  marker; the binding names a file being applied; and no two bindings name
+  the same loop or the same `id`. Any failure is refused
+  (`cf-adopt-binding`), and nothing is written for that file.
+- **The update rules still hold:** a change `update` cannot make (below) is
+  refused, as for any managed loop.
+- **No binding, but a name that looks like it:** when a file has no managed
+  loop and an unmarked loop in this project has a name whose derived id (the
+  rule in "`room-cli loop list` to a file") is the file's `id`, apply
+  refuses (`cf-unmarked-match`) instead of creating a second loop. The
+  caller adopts that loop, or gives the file another `id`.
+
+**A synthetic round trip.** One project has one unmarked loop:
+
+```json
+{"automations": [{"id": "loop-a", "project_id": "project-1", "name": "Hourly kick", "cron": "12 * * * *", "timezone": "UTC", "run_at": null, "webhook": false, "new_thread": true, "script": "#!/bin/sh\nexit 0\n", "agent": null, "secrets": [], "priority": 3, "prompt": "Nothing to do.", "enabled": true}]}
+```
+
+1. Export writes `hourly-kick.md` (`id` `"hourly-kick"`, derived from the
+   name) and `hourly-kick/check`, and reports the pair `hourly-kick` and
+   `loop-a` to its caller, as the binding it would need.
+2. Plan on that file with no binding: no loop carries `[wizloop:hourly-kick]`,
+   and `loop-a`'s name derives `hourly-kick`, so it refuses
+   (`cf-unmarked-match`). Nothing is created.
+3. Plan with the binding `hourly-kick` to `loop-a`: one update of `loop-a`,
+   `--name "Hourly kick [wizloop:hourly-kick]"`, and nothing else differs.
+   No create.
+4. After apply, `loop-a` carries the marker; the next plan, with no binding,
+   matches it by marker and shows no difference.
 
 ## A file to `room-cli loop create`
 
@@ -84,20 +127,20 @@ names the field; it never deletes and recreates a loop in v1:
 
 | `list` key | Loop file |
 | --- | --- |
-| `name` | `id` from the marker and `name` from the rest, as above. Unmarked: export derives `id` from the name (lowercase it, turn each run of characters other than `a-z` and `0-9` into one `-`, trim `-` from both ends, keep at most 64 characters, trim a trailing `-`); the next apply adds the marker, as a name update |
+| `name` | `id` from the marker and `name` from the rest, as above. Unmarked: export derives `id` from the name (lowercase it, turn each run of characters other than `a-z` and `0-9` into one `-`, trim `-` from both ends, keep at most 64 characters, trim a trailing `-`) and reports that `id` with the loop's Cloudroom `id` as the binding an apply needs to adopt it (above). Two unmarked loops in the project that derive the same `id` are both refused (`cf-export-id`) |
 | `cron`, `timezone` | `cron` set: `trigger` `{"cron": <cron>, "timezone": <timezone>}` |
 | `run_at` | `run_at` set: `trigger` `{"at": <run_at>}`, exactly as Cloudroom wrote it |
 | `webhook` | `true`: `trigger` `{"webhook": true}`. The address is never in `list` and never in the file |
 | `script` | `null`: no `check`. Text: `check` `{"run": "<id>/check", "timeout": 60}`, and the text is written byte for byte to `<id>/check` beside the loop file |
 | `new_thread` | `true`: `thread` `"new"`; `false`: `"same"` |
 | `agent` | `null`: no `agent`. An object: `agent` with its `provider`, `model` and `reasoning` |
-| `secrets` | `[]`: `secrets` `[]`. A list: the same list. `null` (every secret): refused, `cf-export-all-secrets` |
+| `secrets` | New-thread loops: `[]` is `secrets` `[]`, a list is the same list, and `null` (every secret) is refused, `cf-export-all-secrets`. Same-thread loops: see "Limits" |
 | `priority` | `priority` |
 | `prompt` | the body |
 
 - **`in` reads back as `at`.** Cloudroom keeps a `--in` loop as its
-  `run_at`, so an `in` file applies once, and export writes the `at` it
-  became.
+  `run_at`, so an `in` file can only create a loop, and export writes the
+  `at` it became.
 - **Params do not read back.** Their values were replaced before Cloudroom
   saw them, so an exported file has no `params`.
 - **Not mapped:** `enabled`, `last_error`, `last_run_at`, `next_run_at` and
@@ -123,23 +166,33 @@ by field:
   byte for byte, and the check script after params are replaced must equal
   `script` byte for byte.
 - `secrets` are compared as sets: Cloudroom may keep them in another order.
-- An `in` file matches any `run_at`: its time was fixed when it was applied.
-- `check.timeout` is not compared: Cloudroom has no timeout to compare.
+- `at` is compared as an instant: `2030-01-02T03:04:05Z` and
+  `2030-01-02T03:04:05.000+00:00` are equal.
+- **An `in` file never matches an existing loop.** Its delay became an
+  absolute `run_at` when it was applied, and `list` cannot show whether a
+  `run_at` came from this delay or from anything else. So an `in` file with
+  a managed (or bound) loop is refused (`cf-in-existing`), whatever that
+  loop's trigger is: the caller writes the `at` it means, or gives the file
+  a new `id`. Example: a managed reminder has `run_at` next week, and its
+  file is changed to `{"in": "30m"}`; plan refuses, rather than reporting
+  no change and leaving the reminder next week.
+- `check.timeout` is always 60 on both sides (see "Limits").
 - A paused managed loop (`enabled: false`) is reported as paused; plan and
   apply neither pause nor resume loops.
-- A file with no managed loop is a create; a managed loop with no file is
-  reported and left alone (v1 never deletes).
+- A file with no managed loop is a create, unless `cf-unmarked-match`
+  refuses it; a bound loop is the file's managed loop. A managed loop with
+  no file is reported and left alone (v1 never deletes).
 
 ## Limits the adapter reports
 
 | Limit | What the adapter does |
 | --- | --- |
-| **A check runs for at most 60 seconds** in Cloud | A `check.timeout` over 60 is refused (`cf-check-timeout`). Up to 60, plan says Cloudroom allows the check 60 seconds whatever the file's timeout is |
+| **A check runs for 60 seconds** in Cloud, and the adapter cannot set another bound | Any `check.timeout` but 60 is refused (`cf-check-timeout`). Over 60, Cloudroom would stop the check early; under 60, Cloudroom would let a late check's output start an agent that the file says must not start. The adapter does not wrap the script to enforce a shorter bound in v1 |
 | **A loop without a check runs at most every 15 minutes** | A `cron` trigger with no `check` that can be due twice within 15 minutes is refused (`cf-too-frequent`). The rule: list the minutes of the day the minute and hour fields allow; if any two in a row, including the last of one day and the first of the next, are less than 15 minutes apart, it is refused. With a check, a loop may run every minute |
 | **A webhook address is shown once** | `create` prints the address once. Apply passes it to its caller once, and never writes it to a file, a plan or a log. Plan cannot show it. `room-cli loop hook <id>` replaces it; the adapter does not call it in v1 |
 | **Loops cannot be created from a thread a loop started** | Apply must run from an ordinary thread or a terminal. If Cloudroom refuses for this reason, apply reports Cloudroom's error unchanged and reports the loop as not created |
 | **An agent is set only on new-thread loops** | A file with `thread` `"same"` and an `agent` is refused (`cf-agent-same-thread`) |
-| **Secrets are limited only on new-thread loops** | A same-thread run prompts the existing thread, which keeps its own environment; the loop grants no secrets of its own. A file with `thread` `"same"` and `secrets` other than `[]` is refused (`cf-secrets-same-thread`); `[]` is applied as `--secrets none` |
+| **Secrets are limited only on new-thread loops** | The format already requires `secrets` `[]` for `thread` `"same"`, and says a same-thread run keeps its thread's environment: Cloudroom re-prompts that thread, and its check runs in that thread's sandbox. The adapter passes `--secrets none`, so the loop grants nothing of its own, and plan states that a same-thread run has the thread's own environment. On export, a same-thread loop with `secrets` `[]` or `null` is written with `secrets` `[]`, and plan treats those two as equal for a same-thread loop: `room-cli loop --help` documents `--secrets` only for fresh-thread loops, so neither value gives a same-thread run an allowlist (an inference from the help text, not a live observation). One with a non-empty list is refused (`cf-export-invalid`, `same-thread-secrets`) |
 | **A one-time trigger in the past** | An `at` time that has passed is refused at create (`cf-at-past`); an existing managed `at` loop still matches its file |
 
 Also true of Cloudroom, and reported by plan where it applies: a check's
@@ -155,10 +208,13 @@ field and the message, with a stable code, printed as the format's are.
 | Code | Field | Message |
 | --- | --- | --- |
 | `cf-duplicate-marker` | `id` | `two Cloudroom loops in this project carry [wizloop:<id>]` |
-| `cf-check-timeout` | `check.timeout` | `Cloudroom runs a check for at most 60 seconds` |
+| `cf-adopt-binding` | `id` | `the binding to Cloudroom loop <loop> cannot be used: <reason>` |
+| `cf-unmarked-match` | `id` | `an unmarked Cloudroom loop in this project has this name; adopt it or choose another id` |
+| `cf-in-existing` | `trigger.in` | `an in trigger can only create a loop; write the at time instead` |
+| `cf-export-id` | `id` | `another unmarked loop in this project derives the same id` |
+| `cf-check-timeout` | `check.timeout` | `Cloudroom runs a check for exactly 60 seconds; set the timeout to 60` |
 | `cf-too-frequent` | `trigger.cron` | `Cloudroom runs a loop without a check at most every 15 minutes` |
 | `cf-agent-same-thread` | `agent` | `Cloudroom sets an agent only for new-thread loops` |
-| `cf-secrets-same-thread` | `secrets` | `Cloudroom limits secrets only for new-thread loops; use []` |
 | `cf-at-past` | `trigger.at` | `the time has passed` |
 | `cf-update-webhook` | `trigger` | `Cloudroom cannot change a loop to or from a webhook` |
 | `cf-update-thread` | `thread` | `Cloudroom cannot change a loop's thread` |
@@ -179,7 +235,10 @@ neither gets no adapter; there is no GitHub Actions fallback.
 ## The format's fixtures under these rules
 
 Each valid fixture in [`format/fixtures/valid/`](../format/fixtures/valid/),
-created fresh (no managed loop yet), with an `at` time still in the future:
+created fresh (no managed or unmarked loop with its id yet), with an `at`
+time still in the future. `cron-check.md`, `script-only.md` and
+`same-thread-agent.md` use a 60-second check, the only one Cloudroom
+applies; `invalid/same-thread-secrets.md` is refused by the format itself:
 
 | Fixture | Result |
 | --- | --- |
@@ -189,9 +248,9 @@ created fresh (no managed loop yet), with an `at` time still in the future:
 | `webhook-new.md` | `create --name "Wake on a delivery [wizloop:webhook-new]" --prompt-file <body> --webhook --new-thread --priority 4 --secrets none` |
 | `script-only.md` | `create --name "Kick an example job hourly [wizloop:script-only]" --prompt-file <body> --cron "12 * * * *" --timezone America/Los_Angeles --new-thread --script-file <check> --priority 3 --secrets none` |
 | `same-thread-agent.md` | refused: `cf-agent-same-thread` (`agent`) |
-| `same-thread-secrets.md` | refused: `cf-secrets-same-thread` (`secrets`) |
 | `fast-no-check.md` | refused: `cf-too-frequent` (`trigger.cron`) |
-| `long-check.md` | refused: `cf-check-timeout` (`check.timeout`) |
+| `long-check.md` | refused: `cf-check-timeout` (`check.timeout`, 120) |
+| `short-check.md` | refused: `cf-check-timeout` (`check.timeout`, 30) |
 
 `<body>` and `<check>` are files holding the body and the check script with
 params replaced: `cron-check.md`'s prompt-file holds

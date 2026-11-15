@@ -343,6 +343,16 @@
         }
       ]
     },
+    "invalid/same-thread-secrets.md": {
+      "result": "refused",
+      "refusals": [
+        {
+          "code": "same-thread-secrets",
+          "field": "secrets",
+          "message": "must be [] when thread is \"same\": a same-thread run keeps its thread's environment"
+        }
+      ]
+    },
     "invalid/secrets-all.md": {
       "result": "refused",
       "refusals": [
@@ -497,7 +507,7 @@
         },
         "check": {
           "run": "cron-check/check.sh",
-          "timeout": 50
+          "timeout": 60
         },
         "thread": "new",
         "agent": {
@@ -571,7 +581,7 @@
         },
         "check": {
           "run": "same-thread-agent/check.sh",
-          "timeout": 20
+          "timeout": 60
         },
         "thread": "same",
         "agent": {
@@ -579,23 +589,6 @@
           "model": "example-model",
           "reasoning": "high"
         }
-      }
-    },
-    "valid/same-thread-secrets.md": {
-      "result": "valid",
-      "parsed": {
-        "secrets": [
-          "EXAMPLE_TOKEN"
-        ],
-        "priority": 3,
-        "params": {},
-        "id": "same-thread-secrets",
-        "name": "Same thread with a secret",
-        "trigger": {
-          "cron": "30 8 * * 1-5",
-          "timezone": "UTC"
-        },
-        "thread": "same"
       }
     },
     "valid/script-only.md": {
@@ -612,6 +605,25 @@
         },
         "check": {
           "run": "script-only/check.sh",
+          "timeout": 60
+        },
+        "thread": "new"
+      }
+    },
+    "valid/short-check.md": {
+      "result": "valid",
+      "parsed": {
+        "secrets": [],
+        "priority": 3,
+        "params": {},
+        "id": "short-check",
+        "name": "A check with a thirty-second bound",
+        "trigger": {
+          "cron": "0 7 * * *",
+          "timezone": "UTC"
+        },
+        "check": {
+          "run": "short-check/check.sh",
           "timeout": 30
         },
         "thread": "new"

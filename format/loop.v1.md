@@ -95,9 +95,9 @@ The frontmatter reads as YAML but parses with no YAML library. Each line is:
 | `name` | string | yes | | A display name: 1 to 100 characters, with at least one that is not whitespace, and no control characters (U+0000 to U+001F, U+007F) |
 | `trigger` | object | yes | | When the loop wakes: exactly one trigger kind, below |
 | `check` | object | no | none | A script that runs first, below. With no check, every wake gives the agent the prompt |
-| `thread` | string | yes | | `"new"`: each run starts a fresh thread. `"same"`: each run prompts again the thread that applied the loop |
+| `thread` | string | yes | | `"new"`: each run starts a fresh thread. `"same"`: each run prompts again the thread that applied the loop, which keeps its own environment (see `secrets`) |
 | `agent` | object | no | the caller's | `{"provider": "...", "model": "...", "reasoning": "..."}`, all three required, each 1 to 100 characters with no whitespace or control characters. Omitted: the agent of whoever applies the loop |
-| `secrets` | array | no | `[]` | The only secrets the loop's runs and its check get. Each item is an environment variable name (`^[A-Z][A-Z0-9_]*$`) or `".env"` (the project's `.env` files), at most once each. `[]` means none. There is no "all" |
+| `secrets` | array | no | `[]` | With `thread` `"new"`: the only secrets the loop's runs and its check get. Each item is an environment variable name (`^[A-Z][A-Z0-9_]*$`) or `".env"` (the project's `.env` files), at most once each. `[]` means none. There is no "all". With `thread` `"same"`, `secrets` must be `[]`: the run happens in an existing thread, which has whatever that thread already has, and the loop grants nothing more. A same-thread file makes no promise that its runs see no secrets |
 | `priority` | integer | no | `3` | 1 (essential) to 4 (niche) |
 | `params` | object | no | `{}` | Named values the prompt and the check use, below |
 
@@ -232,6 +232,7 @@ key's dotted path.
 | `bad-agent` | `agent.<key>` | `must be 1 to 100 characters with no whitespace` |
 | `bad-secret` | `secrets` | `each item must be an environment variable name or ".env"` |
 | `duplicate-secret` | `secrets` | `names <item> more than once` |
+| `same-thread-secrets` | `secrets` | `must be [] when thread is "same": a same-thread run keeps its thread's environment` |
 | `bad-priority` | `priority` | `must be 1 to 4` |
 | `bad-param-name` | `params` | `name <key> must be lowercase letters, digits and underscores, starting with a letter` |
 
@@ -254,6 +255,8 @@ key's dotted path.
   trigger with both `cron` and `at` is one refusal, not three.
 - **`check-not-found`** is checked only when `check.run` passed
   `bad-check-path`.
+- **`same-thread-secrets`** is checked only when `thread` is `"same"` and
+  `secrets` passed its own checks; it is reported at the `secrets` line.
 
 ### Body and params (step 6)
 
