@@ -20,7 +20,7 @@ A ticket is ready when it has the `ready-for-agent` label and every ticket block
 
 - **Development tracker:** `openwizdev/WizLoops` (public).
 - **Related code:** `openwizdev/OpenWiz` (public): the `openwiz loop` commands.
-- **Private records:** `jparker2006/ClosedWiz` (private): grills, exact replies and orchestration state.
+- **Private records:** `jparker2006/ClosedWiz`, private: grills, exact replies and orchestration state.
 
 ## Private records and approval forms
 
