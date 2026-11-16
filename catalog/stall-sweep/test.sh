@@ -9,8 +9,13 @@ trap 'rm -rf "$work"' EXIT
 mkdir "$work/bin"
 cat > "$work/bin/gh" <<'GH'
 #!/bin/sh
+# Like gh pr list: returns at most --limit pull requests (default 30), newest first.
 [ -f "$FIXTURE" ] || { echo "gh: could not reach GitHub" >&2; exit 1; }
-cat "$FIXTURE"
+limit=30
+while [ $# -gt 0 ]; do [ "$1" = "--limit" ] && limit=$2; shift; done
+python3 -I -c 'import json, sys
+prs = sorted(json.load(open(sys.argv[1])), key=lambda p: -p["number"])
+print(json.dumps(prs[:int(sys.argv[2])]))' "$FIXTURE" "$limit"
 GH
 chmod +x "$work/bin/gh"
 # The check as an adapter applies it: params replaced by their values.
@@ -62,6 +67,27 @@ run "stalled pull requests: one line each, with why" "$work/stalled.json" 0 "#12
 #14 idle 61 min: checks not finished
 #15 idle 70 min: green, waiting for a review
 #16 idle 200 min: changes requested, no new push"
+
+# many <file> <count>: <count> open pull requests, #2 upward fresh, #1 stalled.
+many() {
+  python3 -I -c 'import json, sys
+fresh, old = sys.argv[2], sys.argv[3]
+prs = [{"number": n, "isDraft": False, "updatedAt": fresh, "mergeable": "MERGEABLE",
+        "reviewDecision": "", "statusCheckRollup": []} for n in range(2, int(sys.argv[1]) + 1)]
+prs.append({"number": 1, "isDraft": False, "updatedAt": old, "mergeable": "CONFLICTING",
+            "reviewDecision": "", "statusCheckRollup": []})
+print(json.dumps(prs))' "$2" "$(ago 10)" "$(ago 1440)" > "$1"
+}
+
+# catches: a capped read that drops the oldest pull request, so a stalled one
+# behind many fresh ones is never seen and the wake looks quiet.
+many "$work/many.json" 201
+run "201 open, the oldest stalled: reported" "$work/many.json" 0 "#1 idle 1440 min: conflicts with its base"
+
+# catches: a repository with more open pull requests than the check can read
+# looking quiet instead of failing the run.
+many "$work/toomany.json" 1001
+run "1001 open: the run fails, nothing printed" "$work/toomany.json" 2 ""
 
 # catches: an unreachable GitHub read as "nothing is due", hiding every stall.
 run "gh fails: the run fails, nothing printed" "none" 2 ""
