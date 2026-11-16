@@ -188,10 +188,14 @@ prompt is text for an agent and the check is a program that runs:
   `<NAME>` is the name in upper case (`repo` is `WIZLOOP_PARAM_REPO`,
   `idle_minutes` is `WIZLOOP_PARAM_IDLE_MINUTES`). Its value is the param's
   value exactly (an integer as its decimal digits), so a check uses it as
-  data, such as `"$WIZLOOP_PARAM_REPO"`, never as code. The check **uses**
-  a param when its text contains `WIZLOOP_PARAM_<NAME>` not followed by an
-  upper-case letter, a digit or `_`; an adapter must set exactly those
-  variables when the check runs. How it sets them is the adapter's rule.
+  data, such as `"$WIZLOOP_PARAM_REPO"`, never as code. A **reference**
+  in the check is `WIZLOOP_PARAM_` with its whole run of letters, digits
+  and `_` after it, as a shell reads a variable name, where the text just
+  before it is not a letter, digit or `_`. The check **uses** a param when
+  a reference's run is exactly that param's name in upper case
+  (`$WIZLOOP_PARAM_REPOx` is a reference to `REPOx`, not a use of `repo`).
+  An adapter must set exactly the variables of the params the check uses
+  when it runs. How it sets them is the adapter's rule.
 
 ```text
 params: {"repo": "example-org/example-repo"}
@@ -205,6 +209,8 @@ check:  gh issue list -R "$WIZLOOP_PARAM_REPO"   (text unchanged; the value arri
   for use.
 - Every `{{` in the body starts a valid placeholder. v1 has no escape for a
   literal `{{` in the body.
+- Every reference in the check names a declared param: a check that reads
+  a param the file does not declare would run with it unset.
 - The check's text has no placeholder `{{name}}`, declared or not. Any
   other `{{` in a check (such as `{{.title}}` or `{{ end }}` in a `gh`
   template) is ordinary text.
@@ -295,12 +301,16 @@ key's dotted path.
 | `empty-body` | `body` | `the prompt must not be empty` |
 | `bad-placeholder` | `body` | `{{ must start a placeholder {{name}}` |
 | `undeclared-param` | `body` | `uses {{<name>}}, which params does not declare` |
+| `undeclared-param` | `check` | `uses $WIZLOOP_PARAM_<run>, which params does not declare` |
 | `param-in-check` | `check` | `uses {{<name>}}; a check reads it as $WIZLOOP_PARAM_<NAME>` |
 | `unused-param` | `params.<name>` | `is declared but never used` |
 
 `param-in-check` is reported once for each placeholder in the check's text,
-in text order, whether or not `params` declares that name; `<NAME>` is
-`<name>` in upper case. A check written for an older draft of this
+whether or not `params` declares that name; `<NAME>` is `<name>` in upper
+case. `undeclared-param` with field `check` is reported once for each
+reference (see "Params") whose run is not a declared param's name in upper
+case; `<run>` is the run as written, and may be empty. A check's refusals
+come in the order of their place in its text. A check written for an older draft of this
 contract, with `{{repo}}` pasted into its text, is refused this way rather
 than run with the placeholder left in.
 

@@ -238,7 +238,8 @@ names the field; it never deletes and recreates a loop in v1:
   (`cf-export-trigger`).
 - **Export writes only valid files.** If a mapped loop would not be a valid
   loop file (a name over 100 characters, an agent value with a space, a
-  `{{` in the prompt, a `{{name}}` placeholder in the script), export
+  `{{` in the prompt, a `{{name}}` placeholder in the script, a
+  `$WIZLOOP_PARAM_<NAME>` the preamble does not set), export
   refuses it with `cf-export-invalid`, naming the format's field and code.
 
 ## How plan compares

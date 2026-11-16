@@ -29,7 +29,7 @@ check = open(os.path.join(os.path.dirname(loop), front["check"]["run"]), encodin
 if re.search(r"\{\{[a-z][a-z0-9_]*\}\}", check):
     sys.stderr.write("render_check: a placeholder in the check (param-in-check)\n")
     sys.exit(2)
-used = sorted(n for n in params if re.search("WIZLOOP_PARAM_%s(?![A-Z0-9_])" % n.upper(), check))
+used = sorted(n for n in params if re.search("(?<![A-Za-z0-9_])WIZLOOP_PARAM_%s(?![A-Za-z0-9_])" % n.upper(), check))
 exports = []
 for name in used:
     value = params[name]
