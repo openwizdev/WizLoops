@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Render the WizLoops map</title>
+<body>
+<p><a id="save" download="map.png">Save map.png</a></p>
+<img id="map" alt="The WizLoops map" style="max-width:100%">
+<pre id="out" hidden></pre>
+<script type="module">
+// Renders map.excalidraw with Excalidraw's own exporter (pinned), in its
+// Virgil font: shows the PNG with a link to save it, and puts it as base64
+// in #out for a headless browser to read.
+import { exportToBlob } from "https://esm.sh/@excalidraw/excalidraw@0.18.1?deps=react@19.1.0,react-dom@19.1.0";
+const out = document.getElementById("out");
+try {
+  const scene = await (await fetch("map.excalidraw")).json();
+  const blob = await exportToBlob({
+    elements: scene.elements,
+    appState: { ...scene.appState, exportBackground: true, exportScale: 2 },
+    files: scene.files,
+    exportPadding: 40,
+    getDimensions: (width, height) => ({ width: width * 2, height: height * 2, scale: 2 }),
+    mimeType: "image/png",
+  });
+  const url = URL.createObjectURL(blob);
+  document.getElementById("map").src = url;
+  document.getElementById("save").href = url;
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let s = "";
+  for (const b of bytes) s += String.fromCharCode(b);
+  out.textContent = "PNG:" + btoa(s);
+} catch (e) {
+  out.textContent = "ERROR:" + e;
+}
+document.body.dataset.ready = "true";
+</script>
