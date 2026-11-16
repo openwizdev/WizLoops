@@ -300,6 +300,16 @@
         }
       ]
     },
+    "invalid/multiline-param.md": {
+      "result": "refused",
+      "refusals": [
+        {
+          "code": "multiline-param",
+          "field": "params.ref",
+          "message": "must be one line, with no line break or NUL"
+        }
+      ]
+    },
     "invalid/no-frontmatter.md": {
       "result": "refused",
       "refusals": [
@@ -337,6 +347,16 @@
           "code": "wrong-type",
           "field": "params.hours",
           "message": "must be a string or an integer"
+        }
+      ]
+    },
+    "invalid/param-in-check.md": {
+      "result": "refused",
+      "refusals": [
+        {
+          "code": "param-in-check",
+          "field": "check",
+          "message": "uses {{repo}}; a check reads it as $WIZLOOP_PARAM_REPO"
         }
       ]
     },
@@ -444,9 +464,9 @@
       "result": "refused",
       "refusals": [
         {
-          "code": "undeclared-param",
+          "code": "param-in-check",
           "field": "check",
-          "message": "uses {{spec}}, which params does not declare"
+          "message": "uses {{spec}}; a check reads it as $WIZLOOP_PARAM_SPEC"
         }
       ]
     },
@@ -632,6 +652,31 @@
           "timeout": 120
         },
         "thread": "new"
+      }
+    },
+    "valid/params-env.md": {
+      "result": "valid",
+      "parsed": {
+        "id": "params-env",
+        "name": "Params reach the check as data",
+        "trigger": {
+          "cron": "30 6 * * *",
+          "timezone": "UTC"
+        },
+        "check": {
+          "run": "params-env/check.sh",
+          "timeout": 60
+        },
+        "thread": "new",
+        "secrets": [],
+        "priority": 3,
+        "params": {
+          "repo": "example-org/example-repo",
+          "ref": "release/\";printf${IFS}WAKE;false${IFS}\"",
+          "title": "it's $(touch marker) `touch marker`",
+          "spec": 7,
+          "note": "the check's output"
+        }
       }
     },
     "valid/same-thread-agent.md": {
