@@ -310,9 +310,9 @@ whether or not `params` declares that name; `<NAME>` is `<name>` in upper
 case. `undeclared-param` with field `check` is reported once for each
 reference (see "Params") whose run is not a declared param's name in upper
 case; `<run>` is the run as written, and may be empty. A check's refusals
-come in the order of their place in its text. A check written for an older draft of this
-contract, with `{{repo}}` pasted into its text, is refused this way rather
-than run with the placeholder left in.
+come in the order of their place in its text. A check written for an older
+draft of this contract, with `{{repo}}` pasted into its text, is refused
+this way rather than run with the placeholder left in.
 
 ### Folders
 
