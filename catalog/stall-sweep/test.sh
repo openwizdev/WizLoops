@@ -17,7 +17,8 @@ chmod +x "$work/bin/gh"
 sed -e 's|{{repo}}|example-org/example-repo|g' -e 's|{{idle_minutes}}|60|g' \
   "$here/check.sh" > "$work/check.sh"
 
-ago() { date -u -d "-$1 minutes" +%Y-%m-%dT%H:%M:%SZ; }
+# Half a minute past each whole minute, so a slow run cannot change the count.
+ago() { date -u -d "-$(( $1 * 60 + 30 )) seconds" +%Y-%m-%dT%H:%M:%SZ; }
 fail=0
 # run <name> <fixture file or "none"> <expected exit> <expected stdout>
 run() {
