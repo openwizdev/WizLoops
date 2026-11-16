@@ -3,9 +3,10 @@
 # that has had no progress for {{idle_minutes}} minutes or more, with why it
 # looks stalled. Prints nothing when nothing is stalled, so no agent starts.
 # Any update counts as progress: a push, a comment, a review or a label.
-# A failed GitHub read fails the run (exit 2) rather than looking quiet.
+# A read that fails, or that cannot list every open pull request (more than
+# 1000), fails the run (exit 2) rather than looking quiet.
 set -u
-prs=$(timeout 40 gh pr list -R "{{repo}}" --state open --limit 200 \
+prs=$(timeout 40 gh pr list -R "{{repo}}" --state open --limit 1001 \
   --json number,isDraft,updatedAt,mergeable,reviewDecision,statusCheckRollup) || {
   echo "stall-sweep: could not list pull requests in {{repo}}" >&2
   exit 2
@@ -14,8 +15,12 @@ printf '%s' "$prs" | python3 -I -c '
 import datetime, json, sys
 idle_limit = int(sys.argv[1])
 now = datetime.datetime.now(datetime.timezone.utc)
+prs = json.load(sys.stdin)
+if len(prs) > 1000:
+    sys.stderr.write("stall-sweep: more than 1000 open pull requests; cannot read them all\n")
+    sys.exit(2)
 bad = ("FAILURE", "ERROR", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILURE")
-for p in sorted(json.load(sys.stdin), key=lambda p: p["number"]):
+for p in sorted(prs, key=lambda p: p["number"]):
     if p["isDraft"]:
         continue
     updated = datetime.datetime.fromisoformat(p["updatedAt"].replace("Z", "+00:00"))
