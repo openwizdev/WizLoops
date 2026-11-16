@@ -335,7 +335,8 @@ time still in the future. `cron-check.md`, `script-only.md` and
 `same-thread-agent.md` use a 60-second check, the only one Cloudroom
 applies; `invalid/same-thread-secrets.md` is refused by the format itself.
 Exported back, each create below reads back as its own file, `secrets`
-included:
+included, except that a param only the body uses comes back as text in the
+body (below):
 
 | Fixture | Result |
 | --- | --- |
