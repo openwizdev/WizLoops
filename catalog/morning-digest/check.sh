@@ -11,16 +11,22 @@ if [ -z "$since" ]; then
   exit 0
 fi
 
-# One search: print its lines, or one line saying GitHub could not be read.
+# One search: print up to 100 lines, or one line saying GitHub could not be
+# read. It asks for 101, so a list cut at 100 is told apart from exactly 100:
+# then it adds one line saying the list is incomplete and how to finish it.
 search() {
   label=$1
   shift
-  if ! lines=$(gh search "$@" --limit 100 --json repository,number,title \
+  if ! lines=$(gh search "$@" --limit 101 --json repository,number,title \
     --jq ".[] | \"$label: \(.repository.nameWithOwner)#\(.number) \(.title)\"" 2>&1); then
     echo "check: GitHub could not be read ($label): $(printf '%s' "$lines" | head -n 1)"
     return
   fi
-  [ -n "$lines" ] && printf '%s\n' "$lines"
+  [ -z "$lines" ] && return
+  printf '%s\n' "$lines" | head -n 100
+  if [ "$(printf '%s\n' "$lines" | wc -l)" -gt 100 ]; then
+    echo "check: more than 100 $label items; only the first 100 are above. Finish the list with: gh search $*"
+  fi
 }
 
 if ! command -v gh >/dev/null 2>&1; then

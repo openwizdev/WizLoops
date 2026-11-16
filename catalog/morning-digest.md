@@ -25,5 +25,8 @@ Prepare the digest from that list and what you can read on GitHub:
    so nothing that needs them is left out.
 
 Keep it short and plain. Report only what you read; never guess a state you
-did not check. If the check says GitHub could not be read, say so first.
+did not check. If the check says GitHub could not be read, say so first. If
+it says a list has more than 100 items, finish that list with the search it
+names before you write the digest; if you cannot, say first which list is
+incomplete.
 Change nothing: this loop only reports.
