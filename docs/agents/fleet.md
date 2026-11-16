@@ -106,15 +106,15 @@ The triage labels and their names here are in `triage-labels.md`. A fleet adds o
 | --- | --- | --- | --- |
 | 1 | repository root | `sh ci/check.sh` | `checks` |
 
-WL7 adds `openwiz loop validate` on every catalog file and fixture to the same check. A builder runs the red/green proof and the commands its change can affect, then opens the ready pull request.
+`ci/check.sh` refuses private identifiers, then runs `openwiz loop validate` on the catalog and every fixture (`ci/validate.py`, against `format/fixtures/expected.json`) and checks that the validator refuses broken copies (`ci/test-validate.sh`). Locally it needs `openwiz` on `PATH`, built from the OpenWiz commit `.github/workflows/checks.yml` pins (`OPENWIZ_REV`). A builder runs the red/green proof and the commands its change can affect, then opens the ready pull request.
 
 ## CI checks
 
 | Check | Runs | Required on |
 | --- | --- | --- |
-| `checks` | Workflow `checks`, job `checks`: `sh ci/check.sh`, which refuses private identifiers (thread ids) in tracked files | Not required yet; WL7 makes the check required on `main` once it validates every loop file |
+| `checks` | Workflow `checks`, job `checks`: installs `openwiz` from the pinned OpenWiz commit, then `sh ci/check.sh`: no private identifiers, every catalog file valid and every fixture's result exactly as `expected.json` says | `main`, by the repository ruleset `main: checks required` (WL7) |
 
-The workflow runs for every pull request against `main` and every push to `main`, with read-only permissions, no secrets and no persisted checkout credentials.
+The workflow runs for every pull request against `main` and every push to `main`, with read-only permissions, no secrets and no persisted checkout credentials. The OpenWiz commit is a full commit id on OpenWiz `main`, never a branch; moving it is a pull request that changes `OPENWIZ_REV`.
 
 ## GitHub identity
 
