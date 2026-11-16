@@ -4,12 +4,15 @@
 # python3. Run from anywhere: sh catalog/stall-sweep/test.sh
 set -u
 here=$(cd "$(dirname "$0")" && pwd)
+. "$here/../test-params.sh"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 mkdir "$work/bin"
 cat > "$work/bin/gh" <<'GH'
 #!/bin/sh
 # Like gh pr list: returns at most --limit pull requests (default 30), newest first.
+# With GH_ARGS set, it also records its arguments, one per line.
+[ -n "${GH_ARGS-}" ] && for a in "$@"; do printf '%s\n' "$a"; done > "$GH_ARGS"
 [ -f "$FIXTURE" ] || { echo "gh: could not reach GitHub" >&2; exit 1; }
 limit=30
 while [ $# -gt 0 ]; do [ "$1" = "--limit" ] && limit=$2; shift; done
@@ -18,9 +21,8 @@ prs = sorted(json.load(open(sys.argv[1])), key=lambda p: -p["number"])
 print(json.dumps(prs[:int(sys.argv[2])]))' "$FIXTURE" "$limit"
 GH
 chmod +x "$work/bin/gh"
-# The check as an adapter applies it: params replaced by their values.
-sed -e 's|{{repo}}|example-org/example-repo|g' -e 's|{{idle_minutes}}|60|g' \
-  "$here/check.sh" > "$work/check.sh"
+# The check as the adapter renders it: its params exported by the preamble.
+render_check "$here/../stall-sweep.md" "$work/check.sh" || exit 1
 
 # Half a minute past each whole minute, so a slow run cannot change the count.
 ago() { date -u -d "-$(( $1 * 60 + 30 )) seconds" +%Y-%m-%dT%H:%M:%SZ; }
@@ -91,5 +93,20 @@ run "1001 open: the run fails, nothing printed" "$work/toomany.json" 2 ""
 
 # catches: an unreachable GitHub read as "nothing is due", hiding every stall.
 run "gh fails: the run fails, nothing printed" "none" 2 ""
+
+# The payloads from the review of workflow-kick's first pull request, as the
+# repository. catches: a param value read as shell code, which could run
+# commands with the check's GitHub access or print and wake an agent.
+for repo in 'example-org/x"$(touch${IFS}marker)"' 'example-org/`touch marker`' \
+  "example-org/x';touch marker;'" 'release/";printf${IFS}WAKE;false${IFS}"'; do
+  rm -f "$work/marker"
+  render_check "$here/../stall-sweep.md" "$work/check.sh" \
+    "$(python3 -I -c 'import json, sys; print(json.dumps({"repo": sys.argv[1]}))' "$repo")" || exit 1
+  GH_ARGS="$work/args" run "payload repo stays data: $repo" "$work/none.json" 0 ""
+  want=$(printf 'pr\nlist\n-R\n%s' "$repo")
+  if [ "$(head -n 4 "$work/args")" != "$want" ] || [ -e "$work/marker" ]; then
+    printf 'FAIL payload repo reached gh as:\n%s\n' "$(cat "$work/args")"; fail=1
+  fi
+done
 
 exit $fail
