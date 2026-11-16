@@ -41,7 +41,10 @@ Ask for a review on each one, once.
   agent starts, so a quiet wake costs no tokens.
 - **`thread`** is `"same"` (prompt the thread that applied the loop again)
   or `"new"` (a fresh thread each run).
-- **`secrets`** default to none; a loop gets only the ones it names.
+- **`secrets`** default to `[]`: the loop grants no secrets. On a
+  `"new"`-thread loop, the run and its check get only the secrets it names.
+  On a `"same"`-thread loop, like the example above, the run and its check
+  keep whatever the thread already has, so `secrets` limits nothing there.
 - **`params`** fill `{{name}}` placeholders in the prompt and the check.
 
 The whole contract, with every field, refusal and fixture:
@@ -50,8 +53,8 @@ The whole contract, with every field, refusal and fixture:
 ## The catalog
 
 Five starter loops, each generalized from a loop that runs a real software
-factory, with every name and place as a param and no secrets unless one is
-named. They are being added in 0.1.0; see [`catalog/`](catalog/README.md).
+factory, with every name and place as a param and no secret grants unless
+one is named. They are being added in 0.1.0; see [`catalog/`](catalog/README.md).
 
 | id | What it does |
 | --- | --- |
