@@ -35,7 +35,7 @@ run() {
     printf 'FAIL %s\n  exit %s, want %s\n  got:  %s\n  want: %s\n' "$1" "$code" "$3" "$out" "$4"
     fail=1
   else
-    echo "ok   $1"
+    printf 'ok   %s\n' "$1"
   fi
 }
 
@@ -98,7 +98,7 @@ run "gh fails: the run fails, nothing printed" "none" 2 ""
 # repository. catches: a param value read as shell code, which could run
 # commands with the check's GitHub access or print and wake an agent.
 for repo in 'example-org/x"$(touch${IFS}marker)"' 'example-org/`touch marker`' \
-  "example-org/x';touch marker;'" 'release/";printf${IFS}WAKE;false${IFS}"'; do
+  "example-org/x';touch marker;'" 'release/";printf${IFS}WAKE;false${IFS}"' 'example-org/a\cb'; do
   rm -f "$work/marker"
   render_check "$here/../stall-sweep.md" "$work/check.sh" \
     "$(python3 -I -c 'import json, sys; print(json.dumps({"repo": sys.argv[1]}))' "$repo")" || exit 1

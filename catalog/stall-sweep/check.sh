@@ -11,7 +11,7 @@ set -u
 repo=$WIZLOOP_PARAM_REPO
 prs=$(timeout 40 gh pr list -R "$repo" --state open --limit 1001 \
   --json number,isDraft,updatedAt,mergeable,reviewDecision,statusCheckRollup) || {
-  echo "stall-sweep: could not list pull requests in $repo" >&2
+  printf 'stall-sweep: could not list pull requests in %s\n' "$repo" >&2
   exit 2
 }
 printf '%s' "$prs" | python3 -I -c '
