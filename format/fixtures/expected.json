@@ -470,6 +470,16 @@
         }
       ]
     },
+    "invalid/undeclared-param-env.md": {
+      "result": "refused",
+      "refusals": [
+        {
+          "code": "undeclared-param",
+          "field": "check",
+          "message": "uses $WIZLOOP_PARAM_SPEC, which params does not declare"
+        }
+      ]
+    },
     "invalid/undeclared-param.md": {
       "result": "refused",
       "refusals": [
