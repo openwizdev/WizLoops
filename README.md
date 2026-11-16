@@ -45,7 +45,9 @@ Ask for a review on each one, once.
   `"new"`-thread loop, the run and its check get only the secrets it names.
   On a `"same"`-thread loop, like the example above, the run and its check
   keep whatever the thread already has, so `secrets` limits nothing there.
-- **`params`** fill `{{name}}` placeholders in the prompt and the check.
+- **`params`** fill `{{name}}` placeholders in the prompt, and reach the
+  check as environment variables (`$WIZLOOP_PARAM_REPO`), so a value is
+  only ever data. Each value is one line.
 
 The whole contract, with every field, refusal and fixture:
 [`format/loop.v1.md`](format/loop.v1.md).

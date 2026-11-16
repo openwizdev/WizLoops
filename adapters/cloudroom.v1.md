@@ -80,22 +80,106 @@ and never stored in a file.
 4. After apply, `loop-a` carries the marker; the next plan, with no binding,
    matches it by marker and shows no difference.
 
-## A file to `room-cli loop create`
+## Params: the body and the check's preamble
 
-Before mapping, the adapter replaces each placeholder in the body and in the
-check script's text with its param's value (the format's "Params"). Params
-themselves are not stored in Cloudroom.
+The format's "Params" gives a param two ways in: a placeholder in the body,
+and an environment variable for the check. Cloudroom has no field for
+params and no way to set a loop's environment, so the adapter carries them
+like this:
+
+- **The body:** the adapter replaces each placeholder with its param's
+  value, as the format says. The result is the Cloudroom `prompt`.
+- **The check:** the adapter never replaces anything in the check's text.
+  It puts a fixed **preamble** in the script, after the check's first
+  line, that exports the params the check uses. The result is the
+  Cloudroom `script`.
+
+The **rendered script** of a file with a check is built from the check's
+text `C`, byte for byte:
+
+1. **The params it carries** are the params the check uses (the format's
+   rule: its text names `WIZLOOP_PARAM_<NAME>`), in byte order of their
+   names. A param only the body uses is not in the preamble.
+2. **Never mistaken for a preamble:** a check whose own second line is
+   exactly `# wizloop: params from the loop file, as data` is refused
+   (`cf-check-preamble`), with params or without, because export could not
+   tell that line from the adapter's.
+3. **None:** the rendered script is `C` exactly, with no preamble.
+4. **Some:** `C` must start with one of these lines, LF included, because
+   the preamble is POSIX shell: `#!/bin/sh`, `#!/bin/bash`,
+   `#!/usr/bin/env sh` or `#!/usr/bin/env bash`. Any other first line,
+   or none, is refused (`cf-check-shell`). The rendered script is then
+   `C`'s first line, the preamble, and the rest of `C`:
+
+```text
+<C's first line>
+# wizloop: params from the loop file, as data
+export WIZLOOP_PARAM_<NAME>=<value>        one line per param it carries
+# wizloop: the check
+<the rest of C, from its second line, byte for byte>
+```
+
+Each `<value>` is written so the shell reads it back exactly, as data:
+
+- **A string:** POSIX single-quoted. The value is wrapped in `'`, and each
+  `'` in it is written as `'\''`. Nothing inside single quotes is expanded,
+  so `$(...)`, backticks, `"`, `;` and `\` stay literal. A string has no
+  line break or NUL (the format refuses it as `multiline-param`), so each
+  export is one line.
+- **An integer:** its decimal digits, with a leading `-` if negative, not
+  quoted.
+
+Nothing else is ever substituted into the script. A synthetic example: the
+check uses `ref`, `repo` and `spec`, and `spec` is the integer `7`.
+
+```sh
+#!/bin/sh
+# wizloop: params from the loop file, as data
+export WIZLOOP_PARAM_REF='it'\''s $(touch marker) `id`'
+export WIZLOOP_PARAM_REPO='example-org/example-repo'
+export WIZLOOP_PARAM_SPEC=7
+# wizloop: the check
+gh issue list -R "$WIZLOOP_PARAM_REPO"
+```
+
+When it runs, `WIZLOOP_PARAM_REF` holds `` it's $(touch marker) `id` ``
+exactly, and nothing in it runs.
+
+**Reading the preamble back.** Export reads a `script` this way:
+
+- Its second line is not exactly `# wizloop: params from the loop file, as
+  data`: the script has no preamble, the exported check is the whole
+  `script`, and it carries no params.
+- Otherwise the preamble runs to the first later line that is exactly
+  `# wizloop: the check`. Each line between is one export:
+  `export WIZLOOP_PARAM_<NAME>=` and then a value, either an integer
+  (`-?(0|[1-9][0-9]*)`) or a single-quoted string as above, read by undoing
+  the quoting. `<NAME>` in lower case is the param's name; an unquoted value
+  is an integer, a quoted one a string. The exported check is the script's
+  first line followed by everything after the `# wizloop: the check` line.
+- **Exactly, or not at all:** export renders the file it read back (its
+  check and its params, as above) and compares that with `script` byte for
+  byte. A missing end line, a line that is not one export, a name that is
+  not a param name, names out of byte order or repeated, or any other
+  difference is refused (`cf-export-preamble`), and nothing is written for
+  that loop.
+
+A param only the body uses reached Cloudroom only inside the prompt's text,
+so export cannot read it back as a param: the exported body holds its
+value, as written.
+
+## A file to `room-cli loop create`
 
 | Field | `room-cli loop create` flag |
 | --- | --- |
 | `id`, `name` | `--name "<name> [wizloop:<id>]"` |
-| body | `--prompt-file <the body, with params replaced>` |
+| body | `--prompt-file <the body, with its placeholders replaced>` |
 | `trigger` cron | `--cron "<cron>" --timezone <timezone>` |
 | `trigger` at | `--at <at>` |
 | `trigger` in | `--in <in>` |
 | `trigger` webhook | `--webhook` |
 | `thread` | `"new"`: `--new-thread`; `"same"`: `--same-thread` |
-| `check` | `--script-file <the check script, with params replaced>`. `check.timeout` has no flag: see "Limits" |
+| `check` | `--script-file <the rendered script>`: the check with its params preamble (above). `check.timeout` has no flag: see "Limits" |
 | `agent` | `--provider <provider> --model <model> --reasoning <reasoning>`; omitted, no flags (the caller's agent) |
 | `priority` | `--priority <priority>`, always, even for the default 3 |
 | `secrets` | `[]`: `--secrets none`; `"all"`: `--secrets all`; otherwise `--secrets <items joined by ,>`, in file order (`.env` as written). Always passed, so the file, not Cloudroom's default, decides |
@@ -107,8 +191,9 @@ The flags come in the order of the table. With no `check`, no
 
 When a managed loop exists and differs from its file, apply updates it with
 `room-cli loop update <Cloudroom id>` and only the flags for fields that
-differ: `--name`, `--priority`, `--prompt` (the body's text, with params
-replaced), `--cron` with `--timezone`, `--at` or `--in`, `--script-file`,
+differ: `--name`, `--priority`, `--prompt` (the body's text, with its
+placeholders replaced), `--cron` with `--timezone`, `--at` or `--in`,
+`--script-file` (the rendered script, preamble included),
 `--provider` with `--model` and `--reasoning`, and `--secrets`.
 
 `update` has no flag for these changes, so the adapter refuses them and
@@ -131,7 +216,7 @@ names the field; it never deletes and recreates a loop in v1:
 | `cron`, `timezone` | `cron` set: `trigger` `{"cron": <cron>, "timezone": <timezone>}` |
 | `run_at` | `run_at` set: `trigger` `{"at": <run_at>}`, exactly as Cloudroom wrote it |
 | `webhook` | `true`: `trigger` `{"webhook": true}`. The address is never in `list` and never in the file |
-| `script` | `null`: no `check`. Text: `check` `{"run": "<id>/check", "timeout": 60}`, and the text is written byte for byte to `<id>/check` beside the loop file |
+| `script` | `null`: no `check`. Text: `check` `{"run": "<id>/check", "timeout": 60}`; the preamble, if any, is read back into `params` and the check without it is written byte for byte to `<id>/check` beside the loop file (see "Reading the preamble back") |
 | `new_thread` | `true`: `thread` `"new"`; `false`: `"same"` |
 | `agent` | `null`: no `agent`. An object: `agent` with its `provider`, `model` and `reasoning` |
 | `secrets` | `null` (every secret): `secrets` `"all"`. `[]`: `secrets` `[]`. A list: the same list. Each is kept exactly, for both thread kinds; a same-thread loop with a non-empty list is refused, as the format requires (`cf-export-invalid`, `same-thread-secrets`) |
@@ -141,8 +226,9 @@ names the field; it never deletes and recreates a loop in v1:
 - **`in` reads back as `at`.** Cloudroom keeps a `--in` loop as its
   `run_at`, so an `in` file can only create a loop, and export writes the
   `at` it became.
-- **Params do not read back.** Their values were replaced before Cloudroom
-  saw them, so an exported file has no `params`.
+- **Params read back from the preamble.** Each param the check carries
+  comes back with its value and type. A param only the body used comes
+  back as text in the body, not as a param (above).
 - **Not mapped:** `enabled`, `last_error`, `last_run_at`, `next_run_at` and
   `runs` (run state, not definition) and `timezone` when `cron` is `null`.
   `id`, `project_id` and `session_id` are Cloudroom's own identifiers: the
@@ -152,8 +238,9 @@ names the field; it never deletes and recreates a loop in v1:
   (`cf-export-trigger`).
 - **Export writes only valid files.** If a mapped loop would not be a valid
   loop file (a name over 100 characters, an agent value with a space, a
-  `{{` in the prompt or script), export refuses it with
-  `cf-export-invalid`, naming the format's field and code.
+  `{{` in the prompt, a `{{name}}` placeholder in the script, a
+  `$WIZLOOP_PARAM_<NAME>` the preamble does not set), export
+  refuses it with `cf-export-invalid`, naming the format's field and code.
 
 ## How plan compares
 
@@ -162,9 +249,12 @@ managed loop back as in "`room-cli loop list` to a file", and compares field
 by field:
 
 - `name`, `thread`, `agent`, `priority`, and the trigger's kind and values
-  must be equal; the body after params are replaced must equal `prompt`
-  byte for byte, and the check script after params are replaced must equal
-  `script` byte for byte.
+  must be equal; the body after its placeholders are replaced must equal
+  `prompt` byte for byte, and the rendered script must equal `script` byte
+  for byte. The preamble is part of that comparison, so a changed value of
+  a param the check uses, or a change in which params it uses, is a
+  difference in `--script-file`; a changed value of a param only the body
+  uses is a difference in `--prompt`.
 - `secrets` are compared exactly, with a list as a set (Cloudroom may keep
   it in another order): `"all"` equals only `null`, and `[]` equals only
   `[]`. `null` and `[]` are never treated as equal, for either thread kind,
@@ -216,6 +306,9 @@ field and the message, with a stable code, printed as the format's are.
 | `cf-unmarked-match` | `id` | `an unmarked Cloudroom loop in this project has this name; adopt it or choose another id` |
 | `cf-in-existing` | `trigger.in` | `an in trigger can only create a loop; write the at time instead` |
 | `cf-export-id` | `id` | `another unmarked loop in this project derives the same id` |
+| `cf-check-shell` | `check.run` | `Cloudroom passes params to a check through a shell preamble; its first line must be #!/bin/sh, #!/bin/bash, #!/usr/bin/env sh or #!/usr/bin/env bash` |
+| `cf-check-preamble` | `check.run` | `the check's second line is the adapter's preamble line; change that line` |
+| `cf-export-preamble` | `check` | `the script's params preamble is not one this adapter writes` |
 | `cf-check-timeout` | `check.timeout` | `Cloudroom runs a check for exactly 60 seconds; set the timeout to 60` |
 | `cf-too-frequent` | `trigger.cron` | `Cloudroom runs a loop without a check at most every 15 minutes` |
 | `cf-agent-same-thread` | `agent` | `Cloudroom sets an agent only for new-thread loops` |
@@ -243,7 +336,8 @@ time still in the future. `cron-check.md`, `script-only.md` and
 `same-thread-agent.md` use a 60-second check, the only one Cloudroom
 applies; `invalid/same-thread-secrets.md` is refused by the format itself.
 Exported back, each create below reads back as its own file, `secrets`
-included:
+included, except that a param only the body uses comes back as text in the
+body (below):
 
 | Fixture | Result |
 | --- | --- |
@@ -254,12 +348,48 @@ included:
 | `script-only.md` | `create --name "Kick an example job hourly [wizloop:script-only]" --prompt-file <body> --cron "12 * * * *" --timezone America/Los_Angeles --new-thread --script-file <check> --priority 3 --secrets none` |
 | `all-secrets-new.md` | `create --name "A new-thread loop with every secret [wizloop:all-secrets-new]" --prompt-file <body> --cron "0 5 * * *" --timezone UTC --new-thread --priority 3 --secrets all`; `list` then shows `"secrets": null`, which exports as `"all"` |
 | `all-secrets-same.md` | `create --name "A same-thread loop with every secret [wizloop:all-secrets-same]" --prompt-file <body> --cron "15 5 * * *" --timezone UTC --same-thread --priority 3 --secrets all`; reads back as `"all"` the same way |
+| `params-env.md` | `create --name "Params reach the check as data [wizloop:params-env]" --prompt-file <body> --cron "30 6 * * *" --timezone UTC --new-thread --script-file <check> --priority 3 --secrets none` |
+| `python-check.md` | refused: `cf-check-shell` (`check.run`): its check uses `repo` and starts `#!/usr/bin/env python3` |
 | `same-thread-agent.md` | refused: `cf-agent-same-thread` (`agent`) |
 | `fast-no-check.md` | refused: `cf-too-frequent` (`trigger.cron`) |
 | `long-check.md` | refused: `cf-check-timeout` (`check.timeout`, 120) |
 | `short-check.md` | refused: `cf-check-timeout` (`check.timeout`, 30) |
 
-`<body>` and `<check>` are files holding the body and the check script with
-params replaced: `cron-check.md`'s prompt-file holds
-`Triage the due items for spec 42 that the check printed below.`, and its
-script names `example-org/example-repo`.
+`<body>` is a file holding the body with its placeholders replaced, and
+`<check>` a file holding the rendered script. `cron-check.md`'s prompt-file
+holds `Triage the due items for spec 42 that the check printed below.`, and
+its script-file holds exactly:
+
+```sh
+#!/bin/sh
+# wizloop: params from the loop file, as data
+export WIZLOOP_PARAM_REPO='example-org/example-repo'
+# wizloop: the check
+# Prints one line per due item in $WIZLOOP_PARAM_REPO; nothing when none is due.
+if [ -f due.txt ]; then cat due.txt; fi
+exit 0
+```
+
+`params-env.md` carries PR-review injection payloads as param values.
+`note` is used only in the body, so its prompt-file holds
+`Report the check's output for spec 7 in example-org/example-repo.`, and
+its script-file holds exactly:
+
+```sh
+#!/bin/sh
+# wizloop: params from the loop file, as data
+export WIZLOOP_PARAM_REF='release/";printf${IFS}WAKE;false${IFS}"'
+export WIZLOOP_PARAM_REPO='example-org/example-repo'
+export WIZLOOP_PARAM_SPEC=7
+export WIZLOOP_PARAM_TITLE='it'\''s $(touch marker) `touch marker`'
+# wizloop: the check
+# Reads its params from the environment as data and prints nothing, so no
+# agent starts: $WIZLOOP_PARAM_REPO, $WIZLOOP_PARAM_REF, $WIZLOOP_PARAM_TITLE
+# and $WIZLOOP_PARAM_SPEC.
+exit 0
+```
+
+Exported back, each reads back as its file's own check and the params it
+carries: `cron-check.md` with `params` `{"repo": "example-org/example-repo"}`
+and the body's `42` as text, and `params-env.md` with `ref`, `repo`,
+`spec` (the integer `7`) and `title`.

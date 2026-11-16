@@ -1,14 +1,17 @@
 #!/bin/sh
-# stall-sweep's check: prints one line per open pull request in {{repo}}
-# that has had no progress for {{idle_minutes}} minutes or more, with why it
-# looks stalled. Prints nothing when nothing is stalled, so no agent starts.
+# stall-sweep's check: prints one line per open pull request in the
+# repository $WIZLOOP_PARAM_REPO that has had no progress for
+# $WIZLOOP_PARAM_IDLE_MINUTES minutes or more, with why it looks stalled.
+# Prints nothing when nothing is stalled, so no agent starts.
 # Any update counts as progress: a push, a comment, a review or a label.
 # A read that fails, or that cannot list every open pull request (more than
 # 1000), fails the run (exit 2) rather than looking quiet.
+# Both params arrive as data, in the environment.
 set -u
-prs=$(timeout 40 gh pr list -R "{{repo}}" --state open --limit 1001 \
+repo=$WIZLOOP_PARAM_REPO
+prs=$(timeout 40 gh pr list -R "$repo" --state open --limit 1001 \
   --json number,isDraft,updatedAt,mergeable,reviewDecision,statusCheckRollup) || {
-  echo "stall-sweep: could not list pull requests in {{repo}}" >&2
+  printf 'stall-sweep: could not list pull requests in %s\n' "$repo" >&2
   exit 2
 }
 printf '%s' "$prs" | python3 -I -c '
@@ -55,4 +58,4 @@ for p in sorted(prs, key=lambda p: p["number"]):
         else:
             why.append("green, waiting for a review")
     print("#%d idle %d min: %s" % (p["number"], idle, "; ".join(why)))
-' "{{idle_minutes}}" || exit 2
+' "$WIZLOOP_PARAM_IDLE_MINUTES" || exit 2

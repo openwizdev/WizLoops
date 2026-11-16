@@ -5,19 +5,18 @@
 # changed since the last posted status line, and nothing otherwise, so a
 # quiet hour starts no agent.
 #
-# Needs jq. Usage, from anywhere: sh catalog/hourly-status/test.sh
+# Needs jq and python3. Usage, from anywhere: sh catalog/hourly-status/test.sh
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
+. "$here/../test-params.sh"
 command -v jq >/dev/null || { echo "test: needs jq" >&2; exit 2; }
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/bin" "$work/home" "$work/data"
 
-# The check with its params replaced by the file's synthetic defaults, as an
-# adapter replaces them before it applies the loop.
-sed -e 's#[{][{]repo[}][}]#example-org/example-repo#g' \
-    -e 's#[{][{]spec[}][}]#1#g' \
-    "$here/check.sh" > "$work/check.sh"
+# The check as the adapter renders it: the file's synthetic defaults
+# exported by the preamble.
+render_check "$here/../hourly-status.md" "$work/check.sh"
 
 # A stand-in for `gh`. `api graphql` serves page1.json, and page2.json only
 # with --paginate and an $endCursor query, as gh does; `issue view` and
@@ -26,6 +25,8 @@ sed -e 's#[{][{]repo[}][}]#example-org/example-repo#g' \
 # data/fail it fails as gh does when GitHub can't be read.
 cat > "$work/bin/gh" <<'EOF'
 #!/bin/sh
+# With GH_ARGS set, it also records its arguments, one per line.
+[ -n "${GH_ARGS-}" ] && for a in "$@"; do printf '%s\n' "$a"; done > "$GH_ARGS"
 [ -f "$FAKE/fail" ] && { echo "gh: could not connect" >&2; exit 1; }
 cmd="$1 $2"; shift 2
 filter=. paginate=no limit=30 query=
@@ -158,6 +159,27 @@ more_labels=true; failed "a cut-short list fails the run"; more_labels=false
 # catches: GitHub can't be read and the check exits 0 or 1 with no output,
 # which reads as a quiet hour and hides the failure
 touch "$work/data/fail"; failed "a failed read fails the run"
+rm "$work/data/fail"
+
+# The payloads from the review of workflow-kick's first pull request, as the
+# repository. catches: a param value read as shell code, which could run
+# commands with the check's GitHub access or print and wake an agent.
+for repo in 'example-org/x"$(touch${IFS}marker)"' 'example-org/`touch marker`' \
+  "example-org/x';touch marker;'" 'release/";printf${IFS}WAKE;false${IFS}"' 'example-org/a\cb'; do
+  render_check "$here/../hourly-status.md" "$work/check.sh" \
+    "$(python3 -I -c 'import json, sys; print(json.dumps({"repo": sys.argv[1]}))' "$repo")"
+  rm -f "$work/marker" "$work/args"; touch "$work/args"
+  (cd "$work" && GH_ARGS="$work/args" FAKE="$work/data" HOME="$work/home" PATH="$work/bin:$PATH" \
+    sh "$work/check.sh" > "$work/out" 2>&1) || true
+  if [ "$(head -n 1 "$work/out")" = "Spec 1 in $repo changed since the last status line." ] &&
+     grep -qxF -- "owner=${repo%%/*}" "$work/args" && grep -qxF -- "name=${repo#*/}" "$work/args" &&
+     [ ! -e "$work/marker" ]; then
+    printf 'ok   payload repo stays data: %s\n' "$repo"
+  else
+    printf 'FAIL payload repo stays data: %s: %s\n' "$repo" "$(head -n 2 "$work/out" | tr '\n' ' ')"
+    fails=$((fails + 1))
+  fi
+done
 
 [ "$fails" -eq 0 ] || { echo "$fails failed"; exit 1; }
 echo "all passed"

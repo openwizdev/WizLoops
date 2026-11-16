@@ -99,7 +99,7 @@ The frontmatter reads as YAML but parses with no YAML library. Each line is:
 | `agent` | object | no | the caller's | `{"provider": "...", "model": "...", "reasoning": "..."}`, all three required, each 1 to 100 characters with no whitespace or control characters. Omitted: the agent of whoever applies the loop |
 | `secrets` | array, or the string `"all"` | no | `[]` | Which secrets the loop grants its runs and its check, by name only: a file never holds a secret's value. An array names each one: an environment variable name (`^[A-Z][A-Z0-9_]*$`) or `".env"` (the project's `.env` files), at most once each; `[]` means none. `"all"` says explicitly that the loop grants every secret the workspace has; it exists so a loop that already gets every secret can be written down exactly, and it is refused in a catalog (see "Catalogs"). With `thread` `"new"`, that is all the run and its check get. With `thread` `"same"`, `secrets` must be `[]` or `"all"`: the run happens in an existing thread, which keeps whatever that thread already has, so a same-thread file makes no promise that its runs see no secrets |
 | `priority` | integer | no | `3` | 1 (essential) to 4 (niche) |
-| `params` | object | no | `{}` | Named values the prompt and the check use, below |
+| `params` | object | no | `{}` | Named one-line values the prompt and the check use, below |
 
 No other field is allowed. In particular, budgets, shadow mode and in-file
 approval are not part of v1: a loop is approved by the pull request that
@@ -169,20 +169,51 @@ whitespace.
 ### Params
 
 `params` is an object. Each key is a param name (`^[a-z][a-z0-9_]*$`); each
-value is a JSON string or an integer.
+value is a JSON string or an integer. A string value is one line: it has no
+line feed (U+000A), carriage return (U+000D) or NUL (U+0000). A param's
+value in the file is its default; how a caller passes another value is the
+caller's contract, and a caller may only set params the file declares, with
+values that follow the same rules.
 
-A **placeholder** is `{{name}}`: two `{`, a param name, two `}`, with no
-spaces. Placeholders may appear in the body and in the check script's text.
-When the loop is applied, each placeholder is replaced by its param's value
-(an integer as its decimal digits). A param's value in the file is its
-default; how a caller passes another value is the caller's contract, and a
-caller may only set params the file declares.
+A param reaches the prompt and the check in two different ways, because the
+prompt is text for an agent and the check is a program that runs:
 
-- Every placeholder in the body or the check names a declared param.
-- Every declared param is used at least once, in the body or the check. A
-  param refused as `bad-param-name` is not checked for use.
-- Every `{{` in the body or the check starts a valid placeholder. v1 has no
-  escape for a literal `{{`.
+- **In the body, as a placeholder.** A placeholder is `{{name}}`: two `{`,
+  a param name, two `}`, with no spaces. When the loop is applied, each
+  placeholder in the body is replaced by its param's value (an integer as
+  its decimal digits, with a leading `-` if negative).
+- **In the check, as an environment variable.** A check never contains a
+  placeholder, and nothing is ever replaced in its text. It reads a param
+  `name` from the environment variable `WIZLOOP_PARAM_<NAME>`, where
+  `<NAME>` is the name in upper case (`repo` is `WIZLOOP_PARAM_REPO`,
+  `idle_minutes` is `WIZLOOP_PARAM_IDLE_MINUTES`). Its value is the param's
+  value exactly (an integer as its decimal digits), so a check uses it as
+  data, such as `"$WIZLOOP_PARAM_REPO"`, never as code. A **reference**
+  in the check is `WIZLOOP_PARAM_` with its whole run of letters, digits
+  and `_` after it, as a shell reads a variable name, where the text just
+  before it is not a letter, digit or `_`. The check **uses** a param when
+  a reference's run is exactly that param's name in upper case
+  (`$WIZLOOP_PARAM_REPOx` is a reference to `REPOx`, not a use of `repo`).
+  An adapter must set exactly the variables of the params the check uses
+  when it runs. How it sets them is the adapter's rule.
+
+```text
+params: {"repo": "example-org/example-repo"}
+body:   Post a note on {{repo}}.            -> Post a note on example-org/example-repo.
+check:  gh issue list -R "$WIZLOOP_PARAM_REPO"   (text unchanged; the value arrives as data)
+```
+
+- Every placeholder in the body names a declared param.
+- Every declared param is used at least once: as a placeholder in the body,
+  or by the check. A param refused as `bad-param-name` is not checked
+  for use.
+- Every `{{` in the body starts a valid placeholder. v1 has no escape for a
+  literal `{{` in the body.
+- Every reference in the check names a declared param: a check that reads
+  a param the file does not declare would run with it unset.
+- The check's text has no placeholder `{{name}}`, declared or not. Any
+  other `{{` in a check (such as `{{.title}}` or `{{ end }}` in a `gh`
+  template) is ordinary text.
 
 ## Refusals
 
@@ -235,6 +266,7 @@ key's dotted path.
 | `same-thread-secrets` | `secrets` | `must be [] or "all" when thread is "same": a same-thread run keeps its thread's environment` |
 | `bad-priority` | `priority` | `must be 1 to 4` |
 | `bad-param-name` | `params` | `name <key> must be lowercase letters, digits and underscores, starting with a letter` |
+| `multiline-param` | `params.<name>` | `must be one line, with no line break or NUL` |
 
 - **`unknown-field`** is for a frontmatter key that is not in the fields
   table, and for an extra key inside `trigger`, `check` or `agent`
@@ -256,6 +288,9 @@ key's dotted path.
   trigger with both `cron` and `at` is one refusal, not three.
 - **`check-not-found`** is checked only when `check.run` passed
   `bad-check-path`.
+- **`multiline-param`** is for a string param value that contains a line
+  feed, a carriage return or a NUL. It is checked only when the name passed
+  `bad-param-name` and the value passed `wrong-type`.
 - **`same-thread-secrets`** is checked only when `thread` is `"same"` and
   `secrets` passed its own checks; it is reported at the `secrets` line.
 
@@ -264,9 +299,20 @@ key's dotted path.
 | Code | Field | Message |
 | --- | --- | --- |
 | `empty-body` | `body` | `the prompt must not be empty` |
-| `bad-placeholder` | `body` or `check` | `{{ must start a placeholder {{name}}` |
-| `undeclared-param` | `body` or `check` | `uses {{<name>}}, which params does not declare` |
+| `bad-placeholder` | `body` | `{{ must start a placeholder {{name}}` |
+| `undeclared-param` | `body` | `uses {{<name>}}, which params does not declare` |
+| `undeclared-param` | `check` | `uses $WIZLOOP_PARAM_<run>, which params does not declare` |
+| `param-in-check` | `check` | `uses {{<name>}}; a check reads it as $WIZLOOP_PARAM_<NAME>` |
 | `unused-param` | `params.<name>` | `is declared but never used` |
+
+`param-in-check` is reported once for each placeholder in the check's text,
+whether or not `params` declares that name; `<NAME>` is `<name>` in upper
+case. `undeclared-param` with field `check` is reported once for each
+reference (see "Params") whose run is not a declared param's name in upper
+case; `<run>` is the run as written, and may be empty. A check's refusals
+come in the order of their place in its text. A check written for an older
+draft of this contract, with `{{repo}}` pasted into its text, is refused
+this way rather than run with the placeholder left in.
 
 ### Folders
 
