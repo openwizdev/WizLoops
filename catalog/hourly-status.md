@@ -9,8 +9,9 @@ priority: 2
 params: {"repo": "example-org/example-repo", "spec": 1, "status_repo": "example-org/example-tracker", "status_issue": 1}
 ---
 You manage spec {{spec}} in {{repo}}. This hour's check found that its
-tickets or their pull requests changed since your last status line; its
-output is below.
+tickets (their state or labels) or the open pull requests that close them
+(their head, draft state, reviews, CI or comments) changed since your last
+status line; its output is below.
 
 1. Write one status line for spec {{spec}}, from the check's output and what
    you know of the spec: tickets merged out of the total, which are in
