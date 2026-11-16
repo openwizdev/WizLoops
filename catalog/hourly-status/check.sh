@@ -1,5 +1,6 @@
 #!/bin/sh
-# hourly-status check for spec {{spec}} in {{repo}}.
+# hourly-status check for spec $WIZLOOP_PARAM_SPEC in $WIZLOOP_PARAM_REPO. Both
+# params arrive as data, in the environment.
 #
 # Reads every one of the spec's tickets (all pages) with its labels, and for
 # each ticket the open pull requests GitHub links as closing that exact
@@ -14,9 +15,10 @@
 # shows the same change again next hour.
 set -eu
 dir="$HOME/.wizloops/hourly-status"
-key=$(printf '%s-%s' '{{repo}}' '{{spec}}' | tr -c 'A-Za-z0-9.\n-' '_')
+repo=$WIZLOOP_PARAM_REPO
+spec=$WIZLOOP_PARAM_SPEC
+key=$(printf '%s-%s' "$repo" "$spec" | tr -c 'A-Za-z0-9.\n-' '_')
 mkdir -p "$dir"
-repo='{{repo}}'
 
 query='query($owner: String!, $name: String!, $spec: Int!, $endCursor: String) {
   repository(owner: $owner, name: $name) { issue(number: $spec) {
@@ -56,11 +58,11 @@ filter='.data.repository.issue.subIssues.nodes[] |
    + " comments:\(.comments.totalCount)")'
 
 state=$(gh api graphql --paginate -F owner="${repo%%/*}" -F name="${repo#*/}" \
-  -F spec='{{spec}}' -f query="$query" --jq "$filter") ||
-  { echo "hourly-status: cannot read spec {{spec}} in {{repo}}" >&2; exit 2; }
+  -F spec="$spec" -f query="$query" --jq "$filter") ||
+  { printf 'hourly-status: cannot read spec %s in %s\n' "$spec" "$repo" >&2; exit 2; }
 case "$state" in
   cut-short*|*"
-cut-short"*) echo "hourly-status: GitHub cut a list short for spec {{spec}} in {{repo}}" >&2; exit 2 ;;
+cut-short"*) printf 'hourly-status: GitHub cut a list short for spec %s in %s\n' "$spec" "$repo" >&2; exit 2 ;;
 esac
 
 if [ -f "$dir/$key.posted" ] && [ "$state" = "$(cat "$dir/$key.posted")" ]; then
@@ -68,7 +70,7 @@ if [ -f "$dir/$key.posted" ] && [ "$state" = "$(cat "$dir/$key.posted")" ]; then
   exit 0
 fi
 printf '%s\n' "$state" > "$dir/$key.pending"
-echo "Spec {{spec}} in {{repo}} changed since the last status line."
+printf 'Spec %s in %s changed since the last status line.\n' "$spec" "$repo"
 echo "Once the line is posted: mv $dir/$key.pending $dir/$key.posted"
 echo "Each ticket, then the open pull requests that close it:"
 printf '%s\n' "$state"
