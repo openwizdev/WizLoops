@@ -22,14 +22,15 @@ in that folder).
 
 - **Everything that names a place is a param.** Every repository, spec or
   issue number, person, project, thread and address that a loop's prompt or
-  check uses is a `params` entry, used as `{{name}}`. Nothing private is
-  written into a catalog file.
+  check uses is a `params` entry: `{{name}}` in the prompt, and
+  `$WIZLOOP_PARAM_<NAME>` in the check. Nothing private is written into a
+  catalog file.
 - **Defaults are synthetic.** Each param's value in the file is a made-up
   example (`example-org/example-repo`, `1`), never a real one; the person
   applying the loop sets their own.
-- **The schedule is the trigger's.** Placeholders work only in the prompt
-  and the check, so a loop's time and timezone stay in its `trigger`; the
-  file's values are an example to change.
+- **The schedule is the trigger's.** Params reach only the prompt and the
+  check, so a loop's time and timezone stay in its `trigger`; the file's
+  values are an example to change.
 - **Param names are shared.** Catalog loops use the same name for the same
   thing: `repo` (`owner/name`), `spec` (an issue number) and `owner` (who a
   message is for).
