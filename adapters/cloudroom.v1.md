@@ -98,7 +98,7 @@ themselves are not stored in Cloudroom.
 | `check` | `--script-file <the check script, with params replaced>`. `check.timeout` has no flag: see "Limits" |
 | `agent` | `--provider <provider> --model <model> --reasoning <reasoning>`; omitted, no flags (the caller's agent) |
 | `priority` | `--priority <priority>`, always, even for the default 3 |
-| `secrets` | `[]`: `--secrets none`; otherwise `--secrets <items joined by ,>`, in file order (`.env` as written). Always passed: without it Cloudroom gives the loop every secret |
+| `secrets` | `[]`: `--secrets none`; `"all"`: `--secrets all`; otherwise `--secrets <items joined by ,>`, in file order (`.env` as written). Always passed, so the file, not Cloudroom's default, decides |
 
 The flags come in the order of the table. With no `check`, no
 `--script-file`; with no `agent`, no agent flags.
@@ -134,7 +134,7 @@ names the field; it never deletes and recreates a loop in v1:
 | `script` | `null`: no `check`. Text: `check` `{"run": "<id>/check", "timeout": 60}`, and the text is written byte for byte to `<id>/check` beside the loop file |
 | `new_thread` | `true`: `thread` `"new"`; `false`: `"same"` |
 | `agent` | `null`: no `agent`. An object: `agent` with its `provider`, `model` and `reasoning` |
-| `secrets` | New-thread loops: `[]` is `secrets` `[]`, a list is the same list, and `null` (every secret) is refused, `cf-export-all-secrets`. Same-thread loops: see "Limits" |
+| `secrets` | `null` (every secret): `secrets` `"all"`. `[]`: `secrets` `[]`. A list: the same list. Each is kept exactly, for both thread kinds; a same-thread loop with a non-empty list is refused, as the format requires (`cf-export-invalid`, `same-thread-secrets`) |
 | `priority` | `priority` |
 | `prompt` | the body |
 
@@ -165,7 +165,11 @@ by field:
   must be equal; the body after params are replaced must equal `prompt`
   byte for byte, and the check script after params are replaced must equal
   `script` byte for byte.
-- `secrets` are compared as sets: Cloudroom may keep them in another order.
+- `secrets` are compared exactly, with a list as a set (Cloudroom may keep
+  it in another order): `"all"` equals only `null`, and `[]` equals only
+  `[]`. `null` and `[]` are never treated as equal, for either thread kind,
+  so a loop that gets every secret and a file that grants none always show
+  as a difference.
 - `at` is compared as an instant: `2030-01-02T03:04:05Z` and
   `2030-01-02T03:04:05.000+00:00` are equal.
 - **An `in` file never matches an existing loop.** Its delay became an
@@ -192,7 +196,7 @@ by field:
 | **A webhook address is shown once** | `create` prints the address once. Apply passes it to its caller once, and never writes it to a file, a plan or a log. Plan cannot show it. `room-cli loop hook <id>` replaces it; the adapter does not call it in v1 |
 | **Loops cannot be created from a thread a loop started** | Apply must run from an ordinary thread or a terminal. If Cloudroom refuses for this reason, apply reports Cloudroom's error unchanged and reports the loop as not created |
 | **An agent is set only on new-thread loops** | A file with `thread` `"same"` and an `agent` is refused (`cf-agent-same-thread`) |
-| **Secrets are limited only on new-thread loops** | The format already requires `secrets` `[]` for `thread` `"same"`, and says a same-thread run keeps its thread's environment: Cloudroom re-prompts that thread, and its check runs in that thread's sandbox. The adapter passes `--secrets none`, so the loop grants nothing of its own, and plan states that a same-thread run has the thread's own environment. On export, a same-thread loop with `secrets` `[]` or `null` is written with `secrets` `[]`, and plan treats those two as equal for a same-thread loop: `room-cli loop --help` documents `--secrets` only for fresh-thread loops, so neither value gives a same-thread run an allowlist (an inference from the help text, not a live observation). One with a non-empty list is refused (`cf-export-invalid`, `same-thread-secrets`) |
+| **Secrets are limited only on new-thread loops** | The format allows only `[]` or `"all"` for `thread` `"same"`, and says a same-thread run keeps its thread's environment: Cloudroom re-prompts that thread, and its check runs in that thread's sandbox. The adapter passes the file's value (`--secrets none` or `--secrets all`) and keeps what `list` returns exactly, so export and plan round-trip it; plan states that a same-thread run has the thread's own environment whatever the value. `room-cli loop --help` documents `--secrets` only for fresh-thread loops, so what each value changes for a same-thread run is an inference from the help text, not a live observation |
 | **A one-time trigger in the past** | An `at` time that has passed is refused at create (`cf-at-past`); an existing managed `at` loop still matches its file |
 
 Also true of Cloudroom, and reported by plan where it applies: a check's
@@ -220,7 +224,6 @@ field and the message, with a stable code, printed as the format's are.
 | `cf-update-thread` | `thread` | `Cloudroom cannot change a loop's thread` |
 | `cf-update-remove-check` | `check` | `Cloudroom cannot remove a loop's check` |
 | `cf-update-remove-agent` | `agent` | `Cloudroom cannot return a loop to the caller's agent` |
-| `cf-export-all-secrets` | `secrets` | `the loop gets every secret, which a loop file cannot say; choose its secrets in Cloudroom first` |
 | `cf-export-trigger` | `trigger` | `the loop has no cron, run time or webhook` |
 | `cf-export-invalid` | `<field>` | `would be refused by the format as <code>` |
 
@@ -238,7 +241,9 @@ Each valid fixture in [`format/fixtures/valid/`](../format/fixtures/valid/),
 created fresh (no managed or unmarked loop with its id yet), with an `at`
 time still in the future. `cron-check.md`, `script-only.md` and
 `same-thread-agent.md` use a 60-second check, the only one Cloudroom
-applies; `invalid/same-thread-secrets.md` is refused by the format itself:
+applies; `invalid/same-thread-secrets.md` is refused by the format itself.
+Exported back, each create below reads back as its own file, `secrets`
+included:
 
 | Fixture | Result |
 | --- | --- |
@@ -247,6 +252,8 @@ applies; `invalid/same-thread-secrets.md` is refused by the format itself:
 | `in-same.md` | `create --name "Look again in half an hour [wizloop:in-same]" --prompt-file <body> --in 30m --same-thread --priority 1 --secrets none` |
 | `webhook-new.md` | `create --name "Wake on a delivery [wizloop:webhook-new]" --prompt-file <body> --webhook --new-thread --priority 4 --secrets none` |
 | `script-only.md` | `create --name "Kick an example job hourly [wizloop:script-only]" --prompt-file <body> --cron "12 * * * *" --timezone America/Los_Angeles --new-thread --script-file <check> --priority 3 --secrets none` |
+| `all-secrets-new.md` | `create --name "A new-thread loop with every secret [wizloop:all-secrets-new]" --prompt-file <body> --cron "0 5 * * *" --timezone UTC --new-thread --priority 3 --secrets all`; `list` then shows `"secrets": null`, which exports as `"all"` |
+| `all-secrets-same.md` | `create --name "A same-thread loop with every secret [wizloop:all-secrets-same]" --prompt-file <body> --cron "15 5 * * *" --timezone UTC --same-thread --priority 3 --secrets all`; reads back as `"all"` the same way |
 | `same-thread-agent.md` | refused: `cf-agent-same-thread` (`agent`) |
 | `fast-no-check.md` | refused: `cf-too-frequent` (`trigger.cron`) |
 | `long-check.md` | refused: `cf-check-timeout` (`check.timeout`, 120) |

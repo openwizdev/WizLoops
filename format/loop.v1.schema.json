@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": ["id", "name", "trigger", "thread"],
   "if": { "properties": { "thread": { "const": "same" } }, "required": ["thread"] },
-  "then": { "properties": { "secrets": { "maxItems": 0 } } },
+  "then": { "properties": { "secrets": { "anyOf": [ { "const": "all" }, { "type": "array", "maxItems": 0 } ] } } },
   "properties": {
     "id": {
       "type": "string",
@@ -51,12 +51,18 @@
       }
     },
     "secrets": {
-      "type": "array",
-      "uniqueItems": true,
-      "items": {
-        "type": "string",
-        "pattern": "^([A-Z][A-Z0-9_]*|\\.env)$"
-      },
+      "description": "Names only, never values. \"all\" grants every secret; a catalog refuses it, which this schema cannot see.",
+      "oneOf": [
+        {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^([A-Z][A-Z0-9_]*|\\.env)$"
+          }
+        },
+        { "const": "all" }
+      ],
       "default": []
     },
     "priority": { "type": "integer", "minimum": 1, "maximum": 4, "default": 3 },

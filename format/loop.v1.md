@@ -97,7 +97,7 @@ The frontmatter reads as YAML but parses with no YAML library. Each line is:
 | `check` | object | no | none | A script that runs first, below. With no check, every wake gives the agent the prompt |
 | `thread` | string | yes | | `"new"`: each run starts a fresh thread. `"same"`: each run prompts again the thread that applied the loop, which keeps its own environment (see `secrets`) |
 | `agent` | object | no | the caller's | `{"provider": "...", "model": "...", "reasoning": "..."}`, all three required, each 1 to 100 characters with no whitespace or control characters. Omitted: the agent of whoever applies the loop |
-| `secrets` | array | no | `[]` | With `thread` `"new"`: the only secrets the loop's runs and its check get. Each item is an environment variable name (`^[A-Z][A-Z0-9_]*$`) or `".env"` (the project's `.env` files), at most once each. `[]` means none. There is no "all". With `thread` `"same"`, `secrets` must be `[]`: the run happens in an existing thread, which has whatever that thread already has, and the loop grants nothing more. A same-thread file makes no promise that its runs see no secrets |
+| `secrets` | array, or the string `"all"` | no | `[]` | Which secrets the loop grants its runs and its check, by name only: a file never holds a secret's value. An array names each one: an environment variable name (`^[A-Z][A-Z0-9_]*$`) or `".env"` (the project's `.env` files), at most once each; `[]` means none. `"all"` says explicitly that the loop grants every secret the workspace has; it exists so a loop that already gets every secret can be written down exactly, and it is refused in a catalog (see "Catalogs"). With `thread` `"new"`, that is all the run and its check get. With `thread` `"same"`, `secrets` must be `[]` or `"all"`: the run happens in an existing thread, which keeps whatever that thread already has, so a same-thread file makes no promise that its runs see no secrets |
 | `priority` | integer | no | `3` | 1 (essential) to 4 (niche) |
 | `params` | object | no | `{}` | Named values the prompt and the check use, below |
 
@@ -232,7 +232,7 @@ key's dotted path.
 | `bad-agent` | `agent.<key>` | `must be 1 to 100 characters with no whitespace` |
 | `bad-secret` | `secrets` | `each item must be an environment variable name or ".env"` |
 | `duplicate-secret` | `secrets` | `names <item> more than once` |
-| `same-thread-secrets` | `secrets` | `must be [] when thread is "same": a same-thread run keeps its thread's environment` |
+| `same-thread-secrets` | `secrets` | `must be [] or "all" when thread is "same": a same-thread run keeps its thread's environment` |
 | `bad-priority` | `priority` | `must be 1 to 4` |
 | `bad-param-name` | `params` | `name <key> must be lowercase letters, digits and underscores, starting with a letter` |
 
@@ -247,8 +247,9 @@ key's dotted path.
   `trigger.timezone` with `trigger.cron`, `check.run`, `check.timeout`,
   `agent.provider`, `agent.model` and `agent.reasoning`.
 - **`wrong-type`**'s `<type>` is one of `a string`, `an integer`,
-  `an object`, `an array`, or `a string or an integer` (a param's
-  value). Any `trigger.webhook` value but `true` is `bad-webhook`, and any
+  `an object`, `an array`, `a string or an integer` (a param's
+  value), or `an array or "all"` (`secrets`: any other string, such as
+  `"none"`, is this wrong type). Any `trigger.webhook` value but `true` is `bad-webhook`, and any
   `secrets` item that is not a string is `bad-secret`. A field of the wrong type gets no other check. `null` is a wrong
   type for every field; an optional field is left out, never `null`.
 - A **`trigger-kind`** refusal stops that trigger's other checks: a
@@ -279,6 +280,19 @@ A reader given a folder checks every `*.md` file directly inside it, except
 `duplicate-id` is reported on each file after the first, in byte order of
 file name, naming the first.
 
+### Catalogs
+
+A **catalog** is a folder of loop files offered for anyone to use: the
+`catalog/` folder at the top of a WizLoops repository, or any folder the
+caller says is a catalog. A reader checking a catalog checks each file as
+above, and then:
+
+| Code | Field | Message |
+| --- | --- | --- |
+| `catalog-all-secrets` | `secrets` | `must name each secret in a catalog file, never "all"` |
+
+Outside a catalog, `secrets: "all"` is valid.
+
 ## The fixtures
 
 [`fixtures/`](fixtures/) holds synthetic loop files:
@@ -290,14 +304,17 @@ file name, naming the first.
   one refusal.
 - `fixtures/invalid-folder/`: a folder whose files are each valid alone and
   that together must refuse with `duplicate-id`.
+- `fixtures/catalog/`: a folder read as a catalog. Its file is valid as an
+  ordinary loop file and must refuse with `catalog-all-secrets` there.
 
 [`fixtures/expected.json`](fixtures/expected.json) lists every fixture by
 its path relative to `fixtures/`. A valid one has `"result": "valid"` and
 `"parsed"`: its frontmatter as JSON with every default filled in (key order
 is not significant). An invalid one has `"result": "refused"` and
 `"refusals"`: each refusal's `code`, `field` and `message`, in report
-order. The folder fixture's entry ends with `/`, and each of its
-refusals also has `file`, the refused file's name in that folder. A reader
+order. A folder fixture's entry ends with `/`, and each of its
+refusals also has `file`, the refused file's name in that folder; the
+catalog folder's entry also has `"read_as": "catalog"`. A reader
 passes the fixtures when its results match the file exactly, apart from key
 order.
 

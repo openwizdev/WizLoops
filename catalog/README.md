@@ -35,7 +35,8 @@ in that folder).
   message is for).
 - **Secrets are none by default.** A catalog loop has `secrets: []` unless
   it truly needs one. Each secret it needs is named, and its prompt says
-  why.
+  why. `secrets: "all"` is never allowed here: a reader checking the
+  catalog refuses it (`catalog-all-secrets`).
 - **Quiet wakes cost nothing.** Every catalog loop has a check that prints
   nothing when nothing is due, so no agent starts. A loop whose check does
   all the work and always prints nothing (`workflow-kick`) never starts an

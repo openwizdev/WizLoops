@@ -2,6 +2,33 @@
   "schema": "wizloops.loop.v1.fixtures",
   "about": "Every fixture under format/fixtures/ and its expected result, as format/loop.v1.md says.",
   "fixtures": {
+    "catalog/": {
+      "result": "refused",
+      "read_as": "catalog",
+      "refusals": [
+        {
+          "file": "all-secrets.md",
+          "code": "catalog-all-secrets",
+          "field": "secrets",
+          "message": "must name each secret in a catalog file, never \"all\""
+        }
+      ]
+    },
+    "catalog/all-secrets.md": {
+      "result": "valid",
+      "parsed": {
+        "id": "catalog-all-secrets",
+        "name": "Example loop",
+        "trigger": {
+          "cron": "0 9 * * 1",
+          "timezone": "UTC"
+        },
+        "thread": "new",
+        "secrets": "all",
+        "priority": 3,
+        "params": {}
+      }
+    },
     "invalid-folder/duplicate-id/": {
       "result": "refused",
       "refusals": [
@@ -349,7 +376,7 @@
         {
           "code": "same-thread-secrets",
           "field": "secrets",
-          "message": "must be [] when thread is \"same\": a same-thread run keeps its thread's environment"
+          "message": "must be [] or \"all\" when thread is \"same\": a same-thread run keeps its thread's environment"
         }
       ]
     },
@@ -360,6 +387,16 @@
           "code": "bad-secret",
           "field": "secrets",
           "message": "each item must be an environment variable name or \".env\""
+        }
+      ]
+    },
+    "invalid/secrets-none-string.md": {
+      "result": "refused",
+      "refusals": [
+        {
+          "code": "wrong-type",
+          "field": "secrets",
+          "message": "must be an array or \"all\""
         }
       ]
     },
@@ -472,6 +509,36 @@
           "message": "must be true"
         }
       ]
+    },
+    "valid/all-secrets-new.md": {
+      "result": "valid",
+      "parsed": {
+        "secrets": "all",
+        "priority": 3,
+        "params": {},
+        "id": "all-secrets-new",
+        "name": "A new-thread loop with every secret",
+        "trigger": {
+          "cron": "0 5 * * *",
+          "timezone": "UTC"
+        },
+        "thread": "new"
+      }
+    },
+    "valid/all-secrets-same.md": {
+      "result": "valid",
+      "parsed": {
+        "secrets": "all",
+        "priority": 3,
+        "params": {},
+        "id": "all-secrets-same",
+        "name": "A same-thread loop with every secret",
+        "trigger": {
+          "cron": "15 5 * * *",
+          "timezone": "UTC"
+        },
+        "thread": "same"
+      }
     },
     "valid/at-same.md": {
       "result": "valid",
