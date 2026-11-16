@@ -7,22 +7,13 @@
 # It never prints on standard output, so no agent ever starts. A failed
 # dispatch exits 2: the run fails, visibly, instead of passing quietly.
 #
-# Params are replaced into this text as written, so each one is read only as
-# data, from a quoted here-document (no expansion, no quotes to break out of),
-# and is used only as one quoted argument. Each value must be one line.
+# Its params arrive as data, in the environment (WIZLOOP_PARAM_REPO,
+# WIZLOOP_PARAM_WORKFLOW and WIZLOOP_PARAM_REF), and each is used only as one
+# quoted argument. Each value must be one non-empty line.
 
-repo=$(cat <<'workflow-kick: end of param'
-{{repo}}
-workflow-kick: end of param
-)
-workflow=$(cat <<'workflow-kick: end of param'
-{{workflow}}
-workflow-kick: end of param
-)
-ref=$(cat <<'workflow-kick: end of param'
-{{ref}}
-workflow-kick: end of param
-)
+repo=${WIZLOOP_PARAM_REPO-}
+workflow=${WIZLOOP_PARAM_WORKFLOW-}
+ref=${WIZLOOP_PARAM_REF-}
 
 nl='
 '
