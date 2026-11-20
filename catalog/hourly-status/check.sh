@@ -1,18 +1,4 @@
 #!/bin/sh
-# hourly-status check for spec $WIZLOOP_PARAM_SPEC in $WIZLOOP_PARAM_REPO. Both
-# params arrive as data, in the environment.
-#
-# Reads every one of the spec's tickets (all pages) with its labels, and for
-# each ticket the open pull requests GitHub links as closing that exact
-# issue, with their head, draft state, review decision, latest reviews, CI
-# state and comment count. It prints that state only when it differs from
-# the last status line the agent posted. Nothing changed: it prints nothing,
-# so no agent starts. GitHub can't be read, or cut a list short: it fails the
-# run (exit 2), never a silent quiet hour.
-#
-# The state it printed waits in <key>.pending until the agent has posted the
-# line and renamed it to <key>.posted, so a run that fails before posting
-# shows the same change again next hour.
 set -eu
 dir="$HOME/.wizloops/hourly-status"
 repo=$WIZLOOP_PARAM_REPO
@@ -41,9 +27,6 @@ query='query($owner: String!, $name: String!, $spec: Int!, $endCursor: String) {
     }
   } }
 }'
-# One line per ticket and per open pull request that closes it; a line
-# "cut-short" when GitHub has more labels, pull requests or reviews than
-# were read.
 filter='.data.repository.issue.subIssues.nodes[] |
   (if .labels.pageInfo.hasNextPage or .closedByPullRequestsReferences.pageInfo.hasNextPage
       or any(.closedByPullRequestsReferences.nodes[]; .latestReviews.pageInfo.hasNextPage)

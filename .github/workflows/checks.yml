@@ -7,9 +7,6 @@ on:
 permissions:
   contents: read
 env:
-  # openwizdev/OpenWiz main at the merge of #981 (openwiz loop validate,
-  # OpenWiz #790), whose pinned format is WizLoops c7c2ed4. A full commit,
-  # never a branch: change it only to another merged OpenWiz commit.
   OPENWIZ_REV: ef63380829f2aa946c7dae867c85ea1ec21a61f9
   RUST_VERSION: 1.99.1
 jobs:

@@ -6,9 +6,6 @@
 <img id="map" alt="The WizLoops map" style="max-width:100%">
 <pre id="out" hidden></pre>
 <script type="module">
-// Renders map.excalidraw with Excalidraw's own exporter (pinned), in its
-// Virgil font: shows the PNG with a link to save it, and puts it as base64
-// in #out for a headless browser to read.
 import { exportToBlob } from "https://esm.sh/@excalidraw/excalidraw@0.18.1?deps=react@19.1.0,react-dom@19.1.0";
 const out = document.getElementById("out");
 try {
