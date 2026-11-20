@@ -1,4 +1,5 @@
 #!/bin/sh
+# Prints the stalled work.
 # stall-sweep's check: prints one line per open pull request in the
 # repository $WIZLOOP_PARAM_REPO that has had no progress for
 # $WIZLOOP_PARAM_IDLE_MINUTES minutes or more, with why it looks stalled.
