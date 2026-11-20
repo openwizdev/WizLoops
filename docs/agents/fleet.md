@@ -112,7 +112,7 @@ The triage labels and their names here are in `triage-labels.md`. A fleet adds o
 
 | Check | Runs | Required on |
 | --- | --- | --- |
-| `checks` | Workflow `checks`, job `checks`: installs `openwiz` from the pinned OpenWiz commit, then `sh ci/check.sh`: no private identifiers, every catalog file valid and every fixture's result exactly as `expected.json` says | `main`, by the repository ruleset `main: checks required` (WL7) |
+| `checks` | Workflow `checks`, job `checks`: on a pull request, first the comment check (`sh ci/comment-check.sh HEAD^1`: the [comments contract](../../contracts/comments.v1.md)'s diff mode on the lines it adds, with `format/fixtures/` excluded because the loop format's fixtures are test data); then installs `openwiz` from the pinned OpenWiz commit, then `sh ci/check.sh`: no private identifiers, every catalog file valid, every fixture's result exactly as `expected.json` says, and the comment check failing a disallowed comment | `main`, by the repository ruleset `main: checks required` (WL7) |
 
 The workflow runs for every pull request against `main` and every push to `main`, with read-only permissions, no secrets and no persisted checkout credentials. The OpenWiz commit is a full commit id on OpenWiz `main`, never a branch; moving it is a pull request that changes `OPENWIZ_REV`.
 
