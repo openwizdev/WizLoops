@@ -1,0 +1,5 @@
+Deliberately failing CI run: https://github.com/openwizdev/WizLoops/actions/runs/44770002671 (throwaway pull request #31, head a99bf95, which adds one disallowed comment to catalog/stall-sweep/check.sh)
+sh ci/comment-check.sh HEAD^1
+comment-check: 1 disallowed comment(s) in added lines
+catalog/stall-sweep/check.sh:2: comment: a comment outside the allowed kinds: delete it, or turn what it meant into a name, a test or a check
+##[error]Process completed with exit code 1.

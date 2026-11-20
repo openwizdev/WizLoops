@@ -1,17 +1,4 @@
 #!/usr/bin/env python3
-"""Validate every loop file in this repository with `openwiz loop validate`.
-
-    python3 -I ci/validate.py [<root>]
-
-<root> is the repository root (default: this file's parent's parent). Uses
-the `openwiz` on PATH, or $OPENWIZ. Checks that:
-
-- catalog/, read as a catalog, is all valid;
-- every fixture under format/fixtures/ is listed in expected.json, and each
-  one's result and refusals (code, field, message, in order) match it.
-
-Prints each problem and exits 1 if there is any, 0 otherwise.
-"""
 import json
 import os
 import subprocess
@@ -24,7 +11,6 @@ problems = []
 
 
 def validate(path, catalog=False):
-    """Run validate on <path> (relative to root); return (exit code, report)."""
     args = [openwiz, "loop", "validate", "--json"] + (["--catalog"] if catalog else []) + ["--", path]
     run = subprocess.run(args, cwd=root, capture_output=True, text=True)
     try:
@@ -42,7 +28,6 @@ def refusals(items, with_file=False):
     return [{k: os.path.basename(r[k]) if k == "file" else r[k] for k in keys} for r in items]
 
 
-# The catalog: every file valid, read as a catalog.
 code, report = validate("catalog", catalog=True)
 if report is not None:
     if not report["files"]:
@@ -55,7 +40,6 @@ if report is not None:
     if code != 0 and not problems:
         problems.append("catalog: openwiz exited %d with no refusal" % code)
 
-# The fixtures: what is on disk is exactly what expected.json lists.
 expected = json.load(open(os.path.join(fixtures, "expected.json"), encoding="utf-8"))["fixtures"]
 on_disk = set()
 for kind in ("valid", "invalid"):

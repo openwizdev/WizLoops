@@ -1,7 +1,4 @@
 #!/bin/sh
-# Runs stall-sweep's check against a stand-in `gh` that prints synthetic
-# pull requests, and checks what the check prints. Needs sh, sed, date and
-# python3. Run from anywhere: sh catalog/stall-sweep/test.sh
 set -u
 here=$(cd "$(dirname "$0")" && pwd)
 . "$here/../test-params.sh"
@@ -10,8 +7,6 @@ trap 'rm -rf "$work"' EXIT
 mkdir "$work/bin"
 cat > "$work/bin/gh" <<'GH'
 #!/bin/sh
-# Like gh pr list: returns at most --limit pull requests (default 30), newest first.
-# With GH_ARGS set, it also records its arguments, one per line.
 [ -n "${GH_ARGS-}" ] && for a in "$@"; do printf '%s\n' "$a"; done > "$GH_ARGS"
 [ -f "$FIXTURE" ] || { echo "gh: could not reach GitHub" >&2; exit 1; }
 limit=30
@@ -21,13 +16,10 @@ prs = sorted(json.load(open(sys.argv[1])), key=lambda p: -p["number"])
 print(json.dumps(prs[:int(sys.argv[2])]))' "$FIXTURE" "$limit"
 GH
 chmod +x "$work/bin/gh"
-# The check as the adapter renders it: its params exported by the preamble.
 render_check "$here/../stall-sweep.md" "$work/check.sh" || exit 1
 
-# Half a minute past each whole minute, so a slow run cannot change the count.
-ago() { date -u -d "-$(( $1 * 60 + 30 )) seconds" +%Y-%m-%dT%H:%M:%SZ; }
+half_past_minutes_ago() { date -u -d "-$(( $1 * 60 + 30 )) seconds" +%Y-%m-%dT%H:%M:%SZ; }
 fail=0
-# run <name> <fixture file or "none"> <expected exit> <expected stdout>
 run() {
   out=$(cd "$work" && FIXTURE="$2" PATH="$work/bin:$PATH" sh ./check.sh 2>/dev/null)
   code=$?
@@ -39,64 +31,52 @@ run() {
   fi
 }
 
-# catches: a quiet wake that still prints, so an agent starts for nothing.
 echo '[]' > "$work/none.json"
-run "no open pull requests: quiet" "$work/none.json" 0 ""
+run "no open pull requests: quiet, so no agent starts for nothing" "$work/none.json" 0 ""
 
-# catches: waking on work that moved recently, or on a draft nobody waits for.
 cat > "$work/fresh.json" <<J
-[{"number": 3, "title": "#2: fresh", "isDraft": false, "updatedAt": "$(ago 10)", "mergeable": "CONFLICTING", "reviewDecision": "", "statusCheckRollup": []},
- {"number": 4, "title": "#2: a draft", "isDraft": true, "updatedAt": "$(ago 600)", "mergeable": "MERGEABLE", "reviewDecision": "", "statusCheckRollup": []}]
+[{"number": 3, "title": "#2: fresh", "isDraft": false, "updatedAt": "$(half_past_minutes_ago 10)", "mergeable": "CONFLICTING", "reviewDecision": "", "statusCheckRollup": []},
+ {"number": 4, "title": "#2: a draft", "isDraft": true, "updatedAt": "$(half_past_minutes_ago 600)", "mergeable": "MERGEABLE", "reviewDecision": "", "statusCheckRollup": []}]
 J
-run "fresh and draft pull requests: quiet" "$work/fresh.json" 0 ""
+run "fresh and draft pull requests: quiet, no wake for recent work or a draft nobody waits for" "$work/fresh.json" 0 ""
 
-# catches: a stalled pull request missed, or reported without the right reason.
 cat > "$work/stalled.json" <<J
-[{"number": 12, "title": "#5: conflicted and red", "isDraft": false, "updatedAt": "$(ago 90)", "mergeable": "CONFLICTING", "reviewDecision": "",
+[{"number": 12, "title": "#5: conflicted and red", "isDraft": false, "updatedAt": "$(half_past_minutes_ago 90)", "mergeable": "CONFLICTING", "reviewDecision": "",
   "statusCheckRollup": [{"__typename": "CheckRun", "name": "build", "status": "COMPLETED", "conclusion": "FAILURE"},
                         {"__typename": "CheckRun", "name": "lint", "status": "COMPLETED", "conclusion": "SUCCESS"}]},
- {"number": 13, "title": "#6: approved", "isDraft": false, "updatedAt": "$(ago 125)", "mergeable": "MERGEABLE", "reviewDecision": "APPROVED",
+ {"number": 13, "title": "#6: approved", "isDraft": false, "updatedAt": "$(half_past_minutes_ago 125)", "mergeable": "MERGEABLE", "reviewDecision": "APPROVED",
   "statusCheckRollup": [{"__typename": "StatusContext", "context": "ci", "state": "SUCCESS"}]},
- {"number": 14, "title": "#7: stuck checks", "isDraft": false, "updatedAt": "$(ago 61)", "mergeable": "MERGEABLE", "reviewDecision": "",
+ {"number": 14, "title": "#7: stuck checks", "isDraft": false, "updatedAt": "$(half_past_minutes_ago 61)", "mergeable": "MERGEABLE", "reviewDecision": "",
   "statusCheckRollup": [{"__typename": "CheckRun", "name": "build", "status": "QUEUED", "conclusion": ""}]},
- {"number": 15, "title": "#8: nobody reviewed", "isDraft": false, "updatedAt": "$(ago 70)", "mergeable": "MERGEABLE", "reviewDecision": "REVIEW_REQUIRED",
+ {"number": 15, "title": "#8: nobody reviewed", "isDraft": false, "updatedAt": "$(half_past_minutes_ago 70)", "mergeable": "MERGEABLE", "reviewDecision": "REVIEW_REQUIRED",
   "statusCheckRollup": [{"__typename": "CheckRun", "name": "build", "status": "COMPLETED", "conclusion": "SUCCESS"}]},
- {"number": 16, "title": "#9: changes asked", "isDraft": false, "updatedAt": "$(ago 200)", "mergeable": "MERGEABLE", "reviewDecision": "CHANGES_REQUESTED",
+ {"number": 16, "title": "#9: changes asked", "isDraft": false, "updatedAt": "$(half_past_minutes_ago 200)", "mergeable": "MERGEABLE", "reviewDecision": "CHANGES_REQUESTED",
   "statusCheckRollup": []}]
 J
-run "stalled pull requests: one line each, with why" "$work/stalled.json" 0 "#12 idle 90 min: conflicts with its base; failing checks: build
+run "stalled pull requests: one line each, none missed, each with its right reason" "$work/stalled.json" 0 "#12 idle 90 min: conflicts with its base; failing checks: build
 #13 idle 125 min: approved and green, not merged
 #14 idle 61 min: checks not finished
 #15 idle 70 min: green, waiting for a review
 #16 idle 200 min: changes requested, no new push"
 
-# many <file> <count>: <count> open pull requests, #2 upward fresh, #1 stalled.
-many() {
+open_prs_only_the_oldest_stalled() {
   python3 -I -c 'import json, sys
 fresh, old = sys.argv[2], sys.argv[3]
 prs = [{"number": n, "isDraft": False, "updatedAt": fresh, "mergeable": "MERGEABLE",
         "reviewDecision": "", "statusCheckRollup": []} for n in range(2, int(sys.argv[1]) + 1)]
 prs.append({"number": 1, "isDraft": False, "updatedAt": old, "mergeable": "CONFLICTING",
             "reviewDecision": "", "statusCheckRollup": []})
-print(json.dumps(prs))' "$2" "$(ago 10)" "$(ago 1440)" > "$1"
+print(json.dumps(prs))' "$2" "$(half_past_minutes_ago 10)" "$(half_past_minutes_ago 1440)" > "$1"
 }
 
-# catches: a capped read that drops the oldest pull request, so a stalled one
-# behind many fresh ones is never seen and the wake looks quiet.
-many "$work/many.json" 201
-run "201 open, the oldest stalled: reported" "$work/many.json" 0 "#1 idle 1440 min: conflicts with its base"
+open_prs_only_the_oldest_stalled "$work/many.json" 201
+run "201 open, the oldest stalled behind 200 fresh: reported, never dropped by a capped read" "$work/many.json" 0 "#1 idle 1440 min: conflicts with its base"
 
-# catches: a repository with more open pull requests than the check can read
-# looking quiet instead of failing the run.
-many "$work/toomany.json" 1001
-run "1001 open: the run fails, nothing printed" "$work/toomany.json" 2 ""
+open_prs_only_the_oldest_stalled "$work/toomany.json" 1001
+run "1001 open, more than the check can read: the run fails, never looks quiet" "$work/toomany.json" 2 ""
 
-# catches: an unreachable GitHub read as "nothing is due", hiding every stall.
-run "gh fails: the run fails, nothing printed" "none" 2 ""
+run "gh fails: the run fails, never read as nothing due" "none" 2 ""
 
-# The payloads from the review of workflow-kick's first pull request, as the
-# repository. catches: a param value read as shell code, which could run
-# commands with the check's GitHub access or print and wake an agent.
 for repo in 'example-org/x"$(touch${IFS}marker)"' 'example-org/`touch marker`' \
   "example-org/x';touch marker;'" 'release/";printf${IFS}WAKE;false${IFS}"' 'example-org/a\cb'; do
   rm -f "$work/marker"

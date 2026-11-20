@@ -1,11 +1,4 @@
 #!/bin/sh
-# Morning digest check. Prints one line per item for the digest, from the
-# repositories of the GitHub account $WIZLOOP_PARAM_ORG: each pull request
-# merged in the last 24 hours, each open pull request whose checks fail, and
-# each open review request or issue waiting on $WIZLOOP_PARAM_OWNER. Prints
-# nothing when there is none of these, so a quiet morning starts no agent.
-# Read-only; needs a signed-in gh. Both params arrive as data, in the
-# environment.
 org=$WIZLOOP_PARAM_ORG
 owner=$WIZLOOP_PARAM_OWNER
 since=$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null ||
@@ -15,10 +8,7 @@ if [ -z "$since" ]; then
   exit 0
 fi
 
-# One search: print up to 100 lines, or one line saying GitHub could not be
-# read. It asks for 101, so a list cut at 100 is told apart from exactly 100:
-# then it adds one line saying the list is incomplete and how to finish it.
-search() {
+search_up_to_100() {
   label=$1
   shift
   if ! lines=$(gh search "$@" --limit 101 --json repository,number,title \
@@ -37,8 +27,8 @@ if ! command -v gh >/dev/null 2>&1; then
   echo "check: GitHub could not be read: gh is not installed"
   exit 0
 fi
-search merged prs --owner "$org" --merged-at ">=$since"
-search failing prs --owner "$org" --state open --checks failure
-search review-requested prs --owner "$org" --state open --review-requested "$owner"
-search assigned issues --owner "$org" --state open --assignee "$owner"
+search_up_to_100 merged prs --owner "$org" --merged-at ">=$since"
+search_up_to_100 failing prs --owner "$org" --state open --checks failure
+search_up_to_100 review-requested prs --owner "$org" --state open --review-requested "$owner"
+search_up_to_100 assigned issues --owner "$org" --state open --assignee "$owner"
 exit 0

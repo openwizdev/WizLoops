@@ -1,0 +1,7 @@
+test-comment-check: catches: a pull request adding a disallowed comment passes CI: expected exit 1 and "catalog/x/check.sh:2: comment:", got exit 2:
+sh: 0: cannot open <repo>/ci/comment-check.sh: No such file
+test-comment-check: catches: a reasoned escape tag still fails CI: expected exit 0 and "", got exit 2:
+sh: 0: cannot open <repo>/ci/comment-check.sh: No such file
+test-comment-check: catches: a format fixture planting a comment the validator reads fails CI: expected exit 0 and "", got exit 2:
+sh: 0: cannot open <repo>/ci/comment-check.sh: No such file
+exit 1

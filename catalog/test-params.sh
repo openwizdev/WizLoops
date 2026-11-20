@@ -1,16 +1,4 @@
 #!/bin/sh
-# For the catalog's tests only: renders a loop's check the way the Cloudroom
-# adapter rules do (adapters/cloudroom.v1.md, "Params: the body and the
-# check's preamble"): the check's first line, a preamble exporting each param
-# the check uses as WIZLOOP_PARAM_<NAME>, then the rest of the check. Nothing
-# is replaced in the check's text.
-#
-#   . catalog/test-params.sh
-#   render_check <loop file> <output file> [<JSON object of params to set>]
-#
-# The third argument sets params the file declares, as a caller would. A
-# value with a line break or NUL is refused (exit 2), as the format refuses
-# it (multiline-param). Needs python3.
 render_check() {
   python3 -I - "$1" "$2" "${3-}" <<'PY'
 import json, os, re, sys
