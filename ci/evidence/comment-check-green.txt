@@ -1,0 +1,92 @@
+check: no private identifiers
+validate: the catalog and 65 fixtures match expected.json
+test-validate: catalog-file-the-format-refuses: refused, as it must
+test-validate: fixture-refusing-with-another-message: refused, as it must
+test-validate: fixture-missing-from-expected-json: refused, as it must
+ok: catches: a pull request adding a disallowed comment passes CI
+ok: catches: a reasoned escape tag still fails CI
+ok: catches: a format fixture planting a comment the validator reads fails CI
+exit 0
+ok   nothing due is a quiet wake, never prompting the fleet thread for nothing
+ok   due lines wake the thread, asked about this spec and repository alone
+ok   a rate limit is a quiet wake, not a wake every ten minutes for nothing
+ok   any other failure prints one look line, so a broken helper never stalls the fleet unseen
+ok   a missing helper prints one look line, never a quiet wake
+ok   payload repo stays data: example-org/x"$(touch${IFS}marker)"
+ok   payload repo stays data: example-org/`touch marker`
+ok   payload repo stays data: example-org/x';touch marker;'
+ok   payload repo stays data: release/";printf${IFS}WAKE;false${IFS}"
+ok   payload repo stays data: example-org/a\cb
+ok   payload helper path stays data
+ok   payload spec stays one argument
+all passed
+catalog/fleet-check/test.sh exit 0
+ok   the first wake shows the state, so a spec gets its first line
+ok   a pull request closing another repository's #2 is not work on this spec's ticket #2
+ok   the 201st open pull request, closing a ticket on the second page of sub-issues, is seen
+ok   nothing changed since the posted line: no output, so no agent starts
+ok   a ticket closed is a change, so the status line never goes stale
+ok   a change not posted yet is still due, so a run failing before posting loses nothing
+ok   posted, quiet again
+ok   a push to the spec's pull request is a change
+ok   same head: marked draft
+ok   same head: marked ready
+ok   same head: a review asks for changes
+ok   same head: CI failed
+ok   same head: a new comment (a verdict)
+ok   a ticket asks a question
+ok   all of that posted, quiet again
+ok   an unrelated pull request moved: this spec's agent stays asleep
+ok   a list GitHub cut short fails the run, never read as complete
+ok   a failed read fails the run, never a quiet hour
+ok   payload repo stays data: example-org/x"$(touch${IFS}marker)"
+ok   payload repo stays data: example-org/`touch marker`
+ok   payload repo stays data: example-org/x';touch marker;'
+ok   payload repo stays data: release/";printf${IFS}WAKE;false${IFS}"
+ok   payload repo stays data: example-org/a\cb
+all passed
+catalog/hourly-status/test.sh exit 0
+ok   nothing to report: quiet, so no agent starts for nothing
+ok   the four searches ask about this org and owner, no other account or person
+ok   each item one line, under its own search, none missing
+ok   101 items: the first 100 and how to finish the list, never read as complete
+ok   GitHub can't be read: one line per search, never a quiet morning
+ok   no gh: one line says so, never a quiet morning
+ok   payload org and owner stay data: example-org"$(touch${IFS}marker)"
+ok   payload org and owner reach gh as one argument each: example-org"$(touch${IFS}marker)"
+ok   payload org and owner stay data: example-`touch marker`
+ok   payload org and owner reach gh as one argument each: example-`touch marker`
+ok   payload org and owner stay data: example';touch marker;'
+ok   payload org and owner reach gh as one argument each: example';touch marker;'
+ok   payload org and owner stay data: release";printf${IFS}WAKE;false${IFS}"
+ok   payload org and owner reach gh as one argument each: release";printf${IFS}WAKE;false${IFS}"
+ok   payload org and owner stay data: example\cb
+ok   payload org and owner reach gh as one argument each: example\cb
+all passed
+catalog/morning-digest/test.sh exit 0
+ok   no open pull requests: quiet, so no agent starts for nothing
+ok   fresh and draft pull requests: quiet, no wake for recent work or a draft nobody waits for
+ok   stalled pull requests: one line each, none missed, each with its right reason
+ok   201 open, the oldest stalled behind 200 fresh: reported, never dropped by a capped read
+ok   1001 open, more than the check can read: the run fails, never looks quiet
+ok   gh fails: the run fails, never read as nothing due
+ok   payload repo stays data: example-org/x"$(touch${IFS}marker)"
+ok   payload repo stays data: example-org/`touch marker`
+ok   payload repo stays data: example-org/x';touch marker;'
+ok   payload repo stays data: release/";printf${IFS}WAKE;false${IFS}"
+ok   payload repo stays data: example-org/a\cb
+catalog/stall-sweep/test.sh exit 0
+ok   the file's defaults: exactly its workflow, repository and ref dispatched, and nothing printed
+ok   a failed dispatch fails the run, never passing quietly
+ok   a quoted workflow name stays one literal argument
+ok   a command substitution in the ref does not run
+ok   backticks in the ref do not run
+ok   a double-quote breakout in the ref prints nothing
+ok   a single-quote breakout in the repo does not run
+ok   a workflow starting with -- is not a flag
+ok   every param a payload at once
+ok   a two-line value is refused before the check
+ok   a ref of 2 line breaks and 45 characters given past the format: nothing dispatched, the run fails
+ok   a ref of 0 line breaks and 0 characters given past the format: nothing dispatched, the run fails
+all passed
+catalog/workflow-kick/test.sh exit 0
