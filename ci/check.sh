@@ -14,3 +14,4 @@ echo "check: no private identifiers"
 python3 -I ci/validate.py
 # The validator refuses broken copies.
 sh ci/test-validate.sh
+sh ci/test-comment-check.sh
