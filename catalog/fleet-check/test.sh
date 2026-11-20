@@ -1,10 +1,4 @@
 #!/bin/sh
-# Runs fleet-check's check, rendered as the Cloudroom adapter renders it
-# (catalog/test-params.sh), against a stand-in launch-fleet helper, and
-# checks what the loop promises: the helper's due lines wake the fleet
-# thread, nothing due or a rate limit is a quiet wake, and any other failure
-# prints one "look:" line. Its params reach the helper as data.
-# Needs python3. Usage, from anywhere: sh catalog/fleet-check/test.sh
 set -u
 here=$(cd "$(dirname "$0")" && pwd)
 . "$here/../test-params.sh"
@@ -12,9 +6,7 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 mkdir "$work/run"
 
-# helper <path>: a stand-in fleet.sh that records its arguments and GH_REPO,
-# then prints $HELPER_OUT, writes $HELPER_ERR to stderr and exits $HELPER_RC.
-helper() {
+write_stand_in_helper() {
   mkdir -p "$(dirname "$1")"
   cat > "$1" <<'H'
 for a in "$@"; do printf '%s\n' "$a"; done > "$RECORD"
@@ -27,7 +19,6 @@ H
 json() { python3 -I -c 'import json, sys; print(json.dumps(dict(zip(sys.argv[1::2], sys.argv[2::2]))))' "$@"; }
 
 fails=0
-# wake <case> <params JSON> <want stdout> [<want recorded args and GH_REPO>]
 wake() {
   render_check "$here/../fleet-check.md" "$work/check.sh" "$2" || { echo "FAIL $1: not rendered"; fails=$((fails + 1)); return; }
   rm -f "$work/record"; rm -rf "$work/run"; mkdir "$work/run"
@@ -42,34 +33,25 @@ wake() {
   else printf 'ok   %s\n' "$1"; fi
 }
 H="$work/openwiz/skills/launch-fleet/scripts/fleet.sh"
-helper "$H"
+write_stand_in_helper "$H"
 P=$(json fleet_sh "$H")
 R='spec
 1
 GH_REPO=example-org/example-repo'
 
-# catches: a wake with nothing due that still prints, so the fleet thread
-# is prompted for nothing
-wake "nothing due: quiet" "$P" "" "$R"
-# catches: due lines lost, or the helper asked about another spec or repository
+wake "nothing due is a quiet wake, never prompting the fleet thread for nothing" "$P" "" "$R"
 out_lines='due: #2 ready for a builder'
-wake "due lines wake the thread" "$P" "due: #2 ready for a builder" "$R"
-# catches: a rate limit waking the thread every ten minutes for nothing
+wake "due lines wake the thread, asked about this spec and repository alone" "$P" "due: #2 ready for a builder" "$R"
 out_lines= err_lines='gh: API rate limit already exceeded for user' rc=1
-wake "a rate limit is a quiet wake" "$P" ""
+wake "a rate limit is a quiet wake, not a wake every ten minutes for nothing" "$P" ""
 grep -q 'fleet #1: GitHub rate limit; skipping this wake' "$work/err" ||
   { echo "FAIL a rate limit is a quiet wake: no note on stderr"; fails=$((fails + 1)); }
-# catches: a broken helper read as a quiet wake, so the fleet stalls unseen
 err_lines='fleet.sh: cannot parse the plan' rc=3
-wake "any other failure prints one look line" "$P" "look: fleet #1 check failed (exit 3; 124 = timeout): fleet.sh: cannot parse the plan "
+wake "any other failure prints one look line, so a broken helper never stalls the fleet unseen" "$P" "look: fleet #1 check failed (exit 3; 124 = timeout): fleet.sh: cannot parse the plan "
 err_lines= rc=0
-# catches: a missing helper read as a quiet wake
-wake "no helper prints one look line" "$(json fleet_sh "$work/missing/fleet.sh")" \
+wake "a missing helper prints one look line, never a quiet wake" "$(json fleet_sh "$work/missing/fleet.sh")" \
   "look: fleet #1 check: no launch-fleet helper at $work/missing/fleet.sh"
 
-# The payloads from the review of workflow-kick's first pull request.
-# catches: a param value read as shell code, which could run commands with
-# the fleet thread's GitHub access or print and wake the thread.
 for v in 'example-org/x"$(touch${IFS}marker)"' 'example-org/`touch marker`' \
   "example-org/x';touch marker;'" 'release/";printf${IFS}WAKE;false${IFS}"' 'example-org/a\cb'; do
   wake "payload repo stays data: $v" "$(json fleet_sh "$H" repo "$v")" "" "spec
@@ -77,7 +59,7 @@ for v in 'example-org/x"$(touch${IFS}marker)"' 'example-org/`touch marker`' \
 GH_REPO=$v"
 done
 weird="$work/it's \$(touch marker) \`touch marker\`/fleet.sh"
-helper "$weird"
+write_stand_in_helper "$weird"
 wake "payload helper path stays data" "$(json fleet_sh "$weird")" "" "$R"
 wake "payload spec stays one argument" "$(json fleet_sh "$H" spec '1;touch marker $(touch marker)')" "" \
   'spec
