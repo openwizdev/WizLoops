@@ -44,8 +44,9 @@ pr() {
     "$1" "$4" "$3" "$2" "$7" "$5" "$6"
 }
 ticket() {
+  label_nodes=$(printf '%s' "$3" | sed 's/"\([^",]*\)"/{"name":"\1"}/g')
   printf '{"number":%s,"state":"%s","repository":{"nameWithOwner":"example-org/example-repo"},"labels":{"pageInfo":{"hasNextPage":%s},"nodes":[%s]},"closedByPullRequestsReferences":{"pageInfo":{"hasNextPage":false},"nodes":[%s]}}' \
-    "$1" "$2" "$more_labels" "$(printf '%s' "$3" | sed 's/"\([^",]*\)"/{"name":"\1"}/g')" "$4"
+    "$1" "$2" "$more_labels" "$label_nodes" "$4"
 }
 closes() {
   printf '%s' "$1" | sed "s#\"closingIssuesReferences\":\[\]#\"closingIssuesReferences\":[{\"number\":$2,\"repository\":{\"nameWithOwner\":\"$3\"}}]#"
