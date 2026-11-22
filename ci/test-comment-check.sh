@@ -30,17 +30,19 @@ pull_request_ci() {
 workflow=$root/.github/workflows/checks.yml
 no_fetch=$tmp/no-fetch.yml
 sed '/git fetch/d' "$workflow" > "$no_fetch"
+with_step_setting() {
+  awk -v setting="$1" '{ print } /^ *- name: comment-check *$/ { match($0, /^ */); print substr($0, 1, RLENGTH) "  " setting }' "$workflow" > "$2"
+}
 tolerant=$tmp/tolerant.yml
-awk '{ print } /^ *- name: comment-check *$/ { match($0, /^ */); print substr($0, 1, RLENGTH) "  continue-on-error: true" }' "$workflow" > "$tolerant"
-for copy in "$no_fetch" "$tolerant"; do
-  if cmp -s "$workflow" "$copy"; then
-    echo "test-comment-check: could not make $(basename "$copy") from $workflow" >&2
-    exit 1
-  fi
-done
+with_step_setting 'continue-on-error: true' "$tolerant"
+other_shell=$tmp/other-shell.yml
+with_step_setting 'shell: bash {0}' "$other_shell"
 
 workflow_step() {
-  repo="$tmp/$1" wf=$2
+  origin="$tmp/$1" wf=$2
+  repo="$tmp/$1-$(basename "$wf" .yml)-checkout"
+  git clone -q --depth 1 --no-tags "file://$origin" "$repo"
+  tolerates=$(grep -n -E "^ *[\"']?(continue-on-error|shell)[\"']? *:" "$wf" | grep -v -E 'continue-on-error: *false *$' || true)
   step_if=$(awk '
     /^ *- name: comment-check *$/ { s = 1; ind = index($0, "-"); next }
     s && /^ *- / && index($0, "-") <= ind { exit }
@@ -56,9 +58,11 @@ workflow_step() {
   mkdir -p ci tools/comment-check
   cp "$root/ci/comment-check.sh" ci/
   cp "$root/tools/comment-check/check.py" tools/comment-check/
-  git remote get-url origin > /dev/null 2>&1 || git remote add origin "file://$repo"
   set +e
-  if [ "$step_if" != "github.event_name == 'pull_request'" ] || [ -z "$step_run" ]; then
+  if [ -n "$tolerates" ]; then
+    out="$wf sets what tolerates a failing comment-check, or runs it in another shell than the bash -e this proof models: $tolerates"
+    code=tolerated
+  elif [ "$step_if" != "github.event_name == 'pull_request'" ] || [ -z "$step_run" ]; then
     out="no comment-check step that runs on pull requests in $wf (if: '$step_if')"
     code=missing
   else
@@ -88,6 +92,8 @@ workflow_step disallowed "$no_fetch"
 expect 'catches: the workflow proof passes a comment-check step that never fetches the merge parents' 2 'HEAD^1'
 workflow_step disallowed "$tolerant"
 expect 'catches: the workflow proof passes a comment-check step that tolerates its own failure' tolerated 'continue-on-error: true'
+workflow_step disallowed "$other_shell"
+expect 'catches: the workflow proof passes a comment-check step run in a shell that ignores a failing command' tolerated 'shell: bash {0}'
 
 pull_request_ci escaped catalog/x/check.sh '# comment-ok: the runner reads this line'
 expect 'catches: a reasoned escape tag still fails CI' 0 ''
