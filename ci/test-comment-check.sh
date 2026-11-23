@@ -37,6 +37,10 @@ tolerant=$tmp/tolerant.yml
 with_step_setting 'continue-on-error: true' "$tolerant"
 other_shell=$tmp/other-shell.yml
 with_step_setting 'shell: bash {0}' "$other_shell"
+commented=$tmp/commented.yml
+with_step_setting 'continue-on-error: true # continue-on-error: false' "$commented"
+job_defaults=$tmp/job-defaults.yml
+awk '{ print } /^  checks: *$/ { print "    defaults: {run: {shell: '"'"'bash {0}'"'"'}}" }' "$workflow" > "$job_defaults"
 
 workflow_step() {
   origin="$tmp/$1" wf=$2
@@ -94,6 +98,10 @@ workflow_step disallowed "$tolerant"
 expect 'catches: the workflow proof passes a comment-check step that tolerates its own failure' tolerated 'continue-on-error: true'
 workflow_step disallowed "$other_shell"
 expect 'catches: the workflow proof passes a comment-check step run in a shell that ignores a failing command' tolerated 'shell: bash {0}'
+workflow_step disallowed "$commented"
+expect 'catches: the workflow proof reads a trailing comment as the value of continue-on-error' tolerated 'continue-on-error: true # continue-on-error: false'
+workflow_step disallowed "$job_defaults"
+expect 'catches: the workflow proof misses a job-level flow-style defaults shell' tolerated "defaults: {run: {shell: 'bash {0}'}}"
 
 pull_request_ci escaped catalog/x/check.sh '# comment-ok: the runner reads this line'
 expect 'catches: a reasoned escape tag still fails CI' 0 ''
