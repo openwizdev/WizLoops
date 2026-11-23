@@ -46,7 +46,7 @@ workflow_step() {
   origin="$tmp/$1" wf=$2
   repo="$tmp/$1-$(basename "$wf" .yml)-checkout"
   git clone -q --depth 1 --no-tags "file://$origin" "$repo"
-  tolerates=$(grep -n -E "^ *[\"']?(continue-on-error|shell)[\"']? *:" "$wf" | grep -v -E 'continue-on-error: *false *$' || true)
+  tolerates=$(grep -n -E "(^|[{,[:space:]])[\"']?(continue-on-error|shell|defaults)[\"']? *:" "$wf" | grep -v -E '^[0-9]+: *continue-on-error: *false *$' || true)
   step_if=$(awk '
     /^ *- name: comment-check *$/ { s = 1; ind = index($0, "-"); next }
     s && /^ *- / && index($0, "-") <= ind { exit }
@@ -64,7 +64,7 @@ workflow_step() {
   cp "$root/tools/comment-check/check.py" tools/comment-check/
   set +e
   if [ -n "$tolerates" ]; then
-    out="$wf sets what tolerates a failing comment-check, or runs it in another shell than the bash -e this proof models: $tolerates"
+    out="$wf sets what tolerates a failing comment-check, may run it in another shell than the bash -e this proof models, or writes such a key in a form this proof does not read (only a bare continue-on-error: false passes): $tolerates"
     code=tolerated
   elif [ "$step_if" != "github.event_name == 'pull_request'" ] || [ -z "$step_run" ]; then
     out="no comment-check step that runs on pull requests in $wf (if: '$step_if')"
