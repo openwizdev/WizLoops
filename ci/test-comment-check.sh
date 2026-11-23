@@ -37,12 +37,16 @@ tolerant=$tmp/tolerant.yml
 with_step_setting 'continue-on-error: true' "$tolerant"
 other_shell=$tmp/other-shell.yml
 with_step_setting 'shell: bash {0}' "$other_shell"
+commented=$tmp/commented.yml
+with_step_setting 'continue-on-error: true # continue-on-error: false' "$commented"
+job_defaults=$tmp/job-defaults.yml
+awk '{ print } /^  checks: *$/ { print "    defaults: {run: {shell: '"'"'bash {0}'"'"'}}" }' "$workflow" > "$job_defaults"
 
 workflow_step() {
   origin="$tmp/$1" wf=$2
   repo="$tmp/$1-$(basename "$wf" .yml)-checkout"
   git clone -q --depth 1 --no-tags "file://$origin" "$repo"
-  tolerates=$(grep -n -E "^ *[\"']?(continue-on-error|shell)[\"']? *:" "$wf" | grep -v -E 'continue-on-error: *false *$' || true)
+  tolerates=$(grep -n -E "(^|[{,[:space:]])[\"']?(continue-on-error|shell|defaults)[\"']? *:" "$wf" | grep -v -E '^[0-9]+: *continue-on-error: *false *$' || true)
   step_if=$(awk '
     /^ *- name: comment-check *$/ { s = 1; ind = index($0, "-"); next }
     s && /^ *- / && index($0, "-") <= ind { exit }
@@ -60,7 +64,7 @@ workflow_step() {
   cp "$root/tools/comment-check/check.py" tools/comment-check/
   set +e
   if [ -n "$tolerates" ]; then
-    out="$wf sets what tolerates a failing comment-check, or runs it in another shell than the bash -e this proof models: $tolerates"
+    out="$wf sets what tolerates a failing comment-check, may run it in another shell than the bash -e this proof models, or writes such a key in a form this proof does not read (only a bare continue-on-error: false passes): $tolerates"
     code=tolerated
   elif [ "$step_if" != "github.event_name == 'pull_request'" ] || [ -z "$step_run" ]; then
     out="no comment-check step that runs on pull requests in $wf (if: '$step_if')"
@@ -94,6 +98,10 @@ workflow_step disallowed "$tolerant"
 expect 'catches: the workflow proof passes a comment-check step that tolerates its own failure' tolerated 'continue-on-error: true'
 workflow_step disallowed "$other_shell"
 expect 'catches: the workflow proof passes a comment-check step run in a shell that ignores a failing command' tolerated 'shell: bash {0}'
+workflow_step disallowed "$commented"
+expect 'catches: the workflow proof reads a trailing comment as the value of continue-on-error' tolerated 'continue-on-error: true # continue-on-error: false'
+workflow_step disallowed "$job_defaults"
+expect 'catches: the workflow proof misses a job-level flow-style defaults shell' tolerated "defaults: {run: {shell: 'bash {0}'}}"
 
 pull_request_ci escaped catalog/x/check.sh '# comment-ok: the runner reads this line'
 expect 'catches: a reasoned escape tag still fails CI' 0 ''
