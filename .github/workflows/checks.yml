@@ -21,6 +21,9 @@ jobs:
         run: |
           git fetch --no-tags --depth=2 origin "$GITHUB_SHA"
           sh ci/comment-check.sh HEAD^1
+      - name: comment-check-drift
+        if: github.event_name == 'pull_request'
+        run: python3 -I tools/comment-check/drift.py
       - name: Rust ${{ env.RUST_VERSION }}
         run: |
           rustup toolchain install "$RUST_VERSION" --profile minimal --no-self-update
