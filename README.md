@@ -7,20 +7,20 @@
 
 **Loops as files: what wakes an [OpenWiz](https://github.com/openwizdev/OpenWiz) factory, and when.** One Markdown file per loop, changed by pull request, so you can review, copy and diff them. OpenWiz reads the files and sets the loops up on your host.
 
-**Status:** before 0.1.0. The format and five starter loops are here and checked in CI. The `openwiz loop` commands are in OpenWiz's main branch and ship in its next release. Cloudroom is the only host so far; more are coming.
+**Status:** [OpenWiz 0.1.0](https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.0) is released, and its `openwiz loop` commands read these files. The format and five starter loops are here, and CI checks them against that release. Cloudroom is the only host so far; more are coming.
 
 ## Quick start
 
-Coming soon, with the next OpenWiz release. Then, from a project with a loop file:
+From a project with a loop file, using OpenWiz 0.1.0:
 
 ```sh
-openwiz loop validate my-loop.md   # names every problem by file and field
-openwiz loop plan my-loop.md       # a dry run: shows exactly what would change
-openwiz loop apply my-loop         # creates or updates the loop, then reads it back
-openwiz loop export                # writes one file per loop you already have
+openwiz loop validate my-loop.md                    # names every problem by file and field
+openwiz loop plan my-loop.md --project my-project   # a dry run: shows exactly what would change
+openwiz loop apply my-loop --project my-project     # creates or updates that loop, then reads it back
+openwiz loop export --project my-project            # writes one file per loop you already have
 ```
 
-Until then, copy a loop from [the catalog](catalog/README.md) and read it as a recipe.
+`plan`, `apply` and `export` need `--project`. `apply` takes the loop's id. Copy a loop from [the catalog](catalog/README.md) and read it as a recipe, or start from one of those commands.
 
 ## How it works
 
@@ -50,7 +50,7 @@ Every field, refusal and fixture: [`format/loop.v1.md`](format/loop.v1.md). How 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/openwizdev/.github/main/profile/art/map-dark.png">
-  <img alt="How the repos fit: WizSkills and WizLoops feed OpenWiz, the kernel. OpenWiz drives your agents and machines and writes records to GitHub." src="https://raw.githubusercontent.com/openwizdev/.github/main/profile/art/map-light.png" width="560">
+  <img alt="How the repos fit: WizSkills and WizLoops feed OpenWiz, the kernel. OpenWiz drives your agents and machines and writes records to GitHub. WizSite's app reads GitHub, and WizMarket's listings feed that site. WizPlugins holds plugins for the ADEs you use, starting with WizBar. Private records and tools sit apart." src="https://raw.githubusercontent.com/openwizdev/.github/main/profile/art/map-light.png" width="560">
 </picture>
 
 ### The catalog
