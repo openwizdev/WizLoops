@@ -106,7 +106,7 @@ The triage labels and their names here are in `triage-labels.md`. A fleet adds o
 | --- | --- | --- | --- |
 | 1 | repository root | `sh ci/check.sh` | `checks` |
 
-`ci/check.sh` refuses private identifiers, then runs `openwiz loop validate` on the catalog and every fixture (`ci/validate.py`, against `format/fixtures/expected.json`) and checks that the validator refuses broken copies (`ci/test-validate.sh`). Locally it needs `openwiz` on `PATH`, built from the OpenWiz commit `.github/workflows/checks.yml` pins (`OPENWIZ_REV`). A builder runs the red/green proof and the commands its change can affect, then opens the ready pull request.
+`ci/check.sh` refuses private identifiers, then runs `openwiz loop validate` on the catalog and every fixture (`ci/validate.py`, against `format/fixtures/expected.json`), checks that the validator refuses broken copies (`ci/test-validate.sh`), and checks that the comment check and its workflow step fail a disallowed comment (`ci/test-comment-check.sh`). Locally it needs `openwiz` on `PATH`, built from the OpenWiz commit `.github/workflows/checks.yml` pins (`OPENWIZ_REV`). A builder runs the red/green proof and the commands its change can affect, then opens the ready pull request.
 
 ## CI checks
 
