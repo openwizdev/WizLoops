@@ -6,6 +6,7 @@ file in the [format](../format/loop.v1.md).
 
 | id | What it does |
 | --- | --- |
+| [`docs-truth`](docs-truth.md) | Files one issue per missing docs command, path, or contract and closes resolved issues |
 | `fleet-check` | Wakes a fleet's manager only when its spec has something due |
 | `hourly-status` | Posts an hourly status line, only when something changed |
 | `morning-digest` | Sends the owner a daily digest at a fixed local time |
