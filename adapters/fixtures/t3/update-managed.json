@@ -1,0 +1,49 @@
+{
+  "list": {
+    "tasks": [
+      {
+        "scheduledTaskId": "task-1",
+        "title": "Kick every fifteen minutes [wizloop:update-managed]",
+        "prompt": "Start the example workflow.",
+        "enabled": true,
+        "projectId": "project-example",
+        "boundThreadId": null,
+        "freshSession": true,
+        "schedule": {
+          "type": "interval",
+          "everyMs": 600000
+        },
+        "nextRunAt": "2030-01-01T01:00:00.000Z",
+        "lastRunStatus": "succeeded"
+      },
+      {
+        "scheduledTaskId": "task-2",
+        "title": "Hand-made task",
+        "prompt": "Say hello.",
+        "enabled": true,
+        "projectId": "project-example",
+        "boundThreadId": null,
+        "freshSession": true,
+        "schedule": {
+          "type": "fixed_time",
+          "timeOfDay": "07:00"
+        },
+        "nextRunAt": "2030-01-01T01:00:00.000Z",
+        "lastRunStatus": "succeeded"
+      }
+    ]
+  },
+  "plan": {
+    "schedule_task": {
+      "scheduledTaskId": "task-1",
+      "prompt": "[wizloop:update-managed] A scheduled run of the loop file adapters/fixtures/t3/update-managed.md. Do these steps in order. TIME below means the time now in UTC, as YYYY-MM-DDTHH:MM:SSZ.\n\n1. Do this:\nStart the example workflow once, and say that you did.\n\n2. Last, append `TIME update-managed ok WHAT` to .openwiz/home/update-managed/ok.log, where WHAT is one line saying what you did; or, if step 1 failed, `TIME update-managed failed WHY`.",
+      "schedule": {
+        "type": "interval",
+        "everyMs": 900000
+      }
+    },
+    "unmanaged": [
+      "task-2"
+    ]
+  }
+}

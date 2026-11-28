@@ -1,0 +1,15 @@
+{
+  "list": {
+    "tasks": []
+  },
+  "plan": {
+    "refusals": [
+      {
+        "code": "t3-cron",
+        "field": "trigger.cron",
+        "message": "T3 has no cron: this is not every N minutes or hours, or one fixed time a day"
+      }
+    ],
+    "unmanaged": []
+  }
+}

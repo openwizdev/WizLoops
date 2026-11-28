@@ -1,0 +1,15 @@
+{
+  "list": {
+    "tasks": []
+  },
+  "plan": {
+    "refusals": [
+      {
+        "code": "t3-at-past",
+        "field": "trigger.at",
+        "message": "the time has passed"
+      }
+    ],
+    "unmanaged": []
+  }
+}

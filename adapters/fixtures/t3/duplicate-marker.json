@@ -1,0 +1,46 @@
+{
+  "list": {
+    "tasks": [
+      {
+        "scheduledTaskId": "task-5",
+        "title": "Two tasks, one loop [wizloop:duplicate-marker]",
+        "prompt": "Look for new work.",
+        "enabled": true,
+        "projectId": "project-example",
+        "boundThreadId": null,
+        "freshSession": true,
+        "schedule": {
+          "type": "interval",
+          "everyMs": 1800000
+        },
+        "nextRunAt": "2030-01-01T01:00:00.000Z",
+        "lastRunStatus": "succeeded"
+      },
+      {
+        "scheduledTaskId": "task-6",
+        "title": "Two tasks, one loop [wizloop:duplicate-marker]",
+        "prompt": "Look for new work.",
+        "enabled": true,
+        "projectId": "project-example",
+        "boundThreadId": null,
+        "freshSession": true,
+        "schedule": {
+          "type": "interval",
+          "everyMs": 1800000
+        },
+        "nextRunAt": "2030-01-01T01:00:00.000Z",
+        "lastRunStatus": "succeeded"
+      }
+    ]
+  },
+  "plan": {
+    "refusals": [
+      {
+        "code": "t3-duplicate-marker",
+        "field": "id",
+        "message": "two T3 scheduled tasks carry [wizloop:duplicate-marker]"
+      }
+    ],
+    "unmanaged": []
+  }
+}

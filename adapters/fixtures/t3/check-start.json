@@ -1,0 +1,15 @@
+{
+  "list": {
+    "tasks": []
+  },
+  "plan": {
+    "refusals": [
+      {
+        "code": "t3-check-start",
+        "field": "check.run",
+        "message": "T3 runs the check by its #! line; its first line must start with #!"
+      }
+    ],
+    "unmanaged": []
+  }
+}

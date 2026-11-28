@@ -1,0 +1,17 @@
+{
+  "list": {
+    "tasks": []
+  },
+  "plan": {
+    "schedule_task": {
+      "title": "Wake on a delivery [wizloop:webhook]",
+      "prompt": "[wizloop:webhook] A scheduled run of the loop file adapters/fixtures/t3/webhook.md. Do these steps in order. TIME below means the time now in UTC, as YYYY-MM-DDTHH:MM:SSZ.\n\n1. Do this:\nA delivery arrived for example-org/example-repo. Read its newest issue and label it.\n\n2. Last, append `TIME webhook ok WHAT` to .openwiz/home/webhook/ok.log, where WHAT is one line saying what you did; or, if step 1 failed, `TIME webhook failed WHY`.",
+      "schedule": {
+        "type": "webhook"
+      },
+      "bindToCurrentThread": false,
+      "freshSession": true
+    },
+    "unmanaged": []
+  }
+}

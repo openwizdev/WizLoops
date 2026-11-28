@@ -1,0 +1,46 @@
+{
+  "list": {
+    "tasks": [
+      {
+        "scheduledTaskId": "task-9",
+        "title": "Hand-edited loop [wizloop:export-hand-edited]",
+        "prompt": "Do the digest, but skip the check this time.",
+        "enabled": true,
+        "projectId": "project-example",
+        "boundThreadId": "thread-applying",
+        "freshSession": false,
+        "schedule": {
+          "type": "fixed_time",
+          "timeOfDay": "08:45"
+        },
+        "nextRunAt": "2030-01-01T01:00:00.000Z",
+        "lastRunStatus": "succeeded"
+      },
+      {
+        "scheduledTaskId": "task-10",
+        "title": "Hand-made task",
+        "prompt": "Say hello.",
+        "enabled": true,
+        "projectId": "project-example",
+        "boundThreadId": null,
+        "freshSession": true,
+        "schedule": {
+          "type": "fixed_time",
+          "timeOfDay": "07:00"
+        },
+        "nextRunAt": "2030-01-01T01:00:00.000Z",
+        "lastRunStatus": "succeeded"
+      }
+    ]
+  },
+  "export": {
+    "refusals": [
+      {
+        "task": "task-9",
+        "code": "t3-export",
+        "field": "prompt",
+        "message": "cannot be written as a loop file: its prompt is not one these rules write"
+      }
+    ]
+  }
+}

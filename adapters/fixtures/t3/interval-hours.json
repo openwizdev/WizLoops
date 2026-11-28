@@ -1,0 +1,18 @@
+{
+  "list": {
+    "tasks": []
+  },
+  "plan": {
+    "schedule_task": {
+      "title": "Status every two hours [wizloop:interval-hours]",
+      "prompt": "[wizloop:interval-hours] A scheduled run of the loop file adapters/fixtures/t3/interval-hours.md. Do these steps in order. TIME below means the time now in UTC, as YYYY-MM-DDTHH:MM:SSZ.\n\n1. Do this:\nPost one status line, only if something changed.\n\n2. Last, append `TIME interval-hours ok WHAT` to .openwiz/home/interval-hours/ok.log, where WHAT is one line saying what you did; or, if step 1 failed, `TIME interval-hours failed WHY`.",
+      "schedule": {
+        "type": "interval",
+        "everyMs": 7200000
+      },
+      "bindToCurrentThread": true,
+      "freshSession": false
+    },
+    "unmanaged": []
+  }
+}

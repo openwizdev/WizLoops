@@ -1,0 +1,25 @@
+{
+  "list": {
+    "tasks": []
+  },
+  "plan": {
+    "schedule_task": {
+      "title": "Weekday review nudge [wizloop:fixed-time-weekdays]",
+      "prompt": "[wizloop:fixed-time-weekdays] A scheduled run of the loop file adapters/fixtures/t3/fixed-time-weekdays.md. Do these steps in order. TIME below means the time now in UTC, as YYYY-MM-DDTHH:MM:SSZ.\n\n1. Do this:\nAsk for a review on each pull request still waiting for one, once.\n\n2. Last, append `TIME fixed-time-weekdays ok WHAT` to .openwiz/home/fixed-time-weekdays/ok.log, where WHAT is one line saying what you did; or, if step 1 failed, `TIME fixed-time-weekdays failed WHY`.",
+      "schedule": {
+        "type": "fixed_time",
+        "timeOfDay": "09:00",
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "bindToCurrentThread": false,
+      "freshSession": true
+    },
+    "unmanaged": []
+  }
+}

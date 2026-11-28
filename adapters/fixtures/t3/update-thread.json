@@ -1,0 +1,31 @@
+{
+  "list": {
+    "tasks": [
+      {
+        "scheduledTaskId": "task-7",
+        "title": "Now a fresh session per run [wizloop:update-thread]",
+        "prompt": "Look for new work.",
+        "enabled": true,
+        "projectId": "project-example",
+        "boundThreadId": "thread-applying",
+        "freshSession": false,
+        "schedule": {
+          "type": "interval",
+          "everyMs": 1800000
+        },
+        "nextRunAt": "2030-01-01T01:00:00.000Z",
+        "lastRunStatus": "succeeded"
+      }
+    ]
+  },
+  "plan": {
+    "refusals": [
+      {
+        "code": "t3-update-thread",
+        "field": "thread",
+        "message": "T3 cannot move a managed task to another thread or thread kind; delete it in T3 or choose another id"
+      }
+    ],
+    "unmanaged": []
+  }
+}
