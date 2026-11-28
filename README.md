@@ -14,13 +14,13 @@
 From a project with a loop file, using OpenWiz 0.1.0:
 
 ```sh
-openwiz loop validate my-loop.md                    # names every problem by file and field
-openwiz loop plan my-loop.md --project my-project   # a dry run: shows exactly what would change
-openwiz loop apply my-loop --project my-project     # creates or updates that loop, then reads it back
-openwiz loop export --project my-project            # writes one file per loop you already have
+openwiz loop validate my-loop.md                                      # names every problem by file and field
+openwiz loop plan my-loop.md --project <project-id>                   # a dry run: shows exactly what would change
+openwiz loop apply my-loop --project <project-id> --from my-loop.md   # creates or updates that loop, then reads it back
+openwiz loop export --project <project-id>                            # writes one file per loop (checks need Linux in 0.1.0)
 ```
 
-`plan`, `apply` and `export` need `--project`. `apply` takes the loop's id. Copy a loop from [the catalog](catalog/README.md) and read it as a recipe, or start from one of those commands.
+`plan`, `apply` and `export` need `--project` with the Cloudroom project ID (`project_id`, not its display name). `apply` takes the loop's id and `--from` with the same path passed to `plan` (without `--from`, it looks for `./<id>.md`). In OpenWiz 0.1.0, exporting a project with an exportable loop that has a check requires Linux: on macOS, `export` exits 1 before writing any files. Copy a loop from [the catalog](catalog/README.md) and read it as a recipe, or start from one of those commands.
 
 ## How it works
 
