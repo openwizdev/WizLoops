@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 env:
-  OPENWIZ_REV: ef63380829f2aa946c7dae867c85ea1ec21a61f9
+  OPENWIZ_REV: 2abcd5f532c5c2a080a1b876e27dec2b9e7d29ab
   RUST_VERSION: 1.99.1
 jobs:
   checks:
