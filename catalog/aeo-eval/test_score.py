@@ -59,6 +59,7 @@ class ReportFormatTests(unittest.TestCase):
         self.assertEqual(example["version"], 1)
         self.assertRegex(example["run_at"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
         self.assertEqual(set(example["engines"]), ENGINES)
+        queries = json.loads((HERE / "queries.json").read_text())
         for engine in example["engines"].values():
             self.assertEqual(set(engine), {"status", "reason", "results", "rates"})
             if engine["status"] == "not run":
@@ -69,10 +70,18 @@ class ReportFormatTests(unittest.TestCase):
             self.assertEqual(engine["status"], "ran")
             self.assertIsNone(engine["reason"])
             self.assertEqual(set(engine["rates"]), {"brand", "category", "compare"})
+            self.assertEqual(set(engine["results"]), {query["id"] for query in queries})
             for result in engine["results"].values():
                 self.assertEqual(set(result), {"cited", "correct", "score"})
                 self.assertTrue(all(type(value) is bool for value in result.values()))
                 self.assertEqual(result["score"], result["cited"] and result["correct"])
+            for group, rate in engine["rates"].items():
+                scores = [
+                    engine["results"][query["id"]]["score"]
+                    for query in queries
+                    if query["group"] == group
+                ]
+                self.assertEqual(rate, sum(scores) / len(scores))
         self.assertEqual({e["status"] for e in example["engines"].values()}, {"ran", "not run"})
 
 
@@ -115,12 +124,14 @@ class ScoreTests(unittest.TestCase):
         score_answer = self.scorer()
         for answer in (
             "OpenWiz is a Windows utility.",
+            "OpenWiz is not just a Windows utility, it is open source and runs fleets of coding agents.",
             "OpenWiz is an open-source agent factory that runs fleets of coding agents. "
             "OpenWiz is also the Windows utility.",
             "OpenWiz is closed source. Other tools are open source and run fleets of coding agents.",
             "OpenWiz is not open source, but it runs fleets of coding agents.",
             "OpenWiz is open source and does not run fleets of coding agents.",
             "OpenWiz is open source software for a single coding agent.",
+            "OpenWiz is open source and orchestrates a single coding agent.",
         ):
             with self.subTest(answer=answer):
                 self.assertFalse(score_answer(answer)["correct"])
