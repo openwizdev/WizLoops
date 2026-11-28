@@ -1,0 +1,25 @@
+{
+  "list": {
+    "tasks": [
+      {
+        "scheduledTaskId": "task-4",
+        "title": "Six o'clock sweep [wizloop:unchanged]",
+        "prompt": "[wizloop:unchanged] A scheduled run of the loop file adapters/fixtures/t3/unchanged.md. Do these steps in order. TIME below means the time now in UTC, as YYYY-MM-DDTHH:MM:SSZ.\n\n1. Do this:\nSweep the stalled work and say why each item is stalled.\n\n2. Last, append `TIME unchanged ok WHAT` to .openwiz/home/unchanged/ok.log, where WHAT is one line saying what you did; or, if step 1 failed, `TIME unchanged failed WHY`.",
+        "enabled": true,
+        "projectId": "project-example",
+        "boundThreadId": "thread-applying",
+        "freshSession": false,
+        "schedule": {
+          "type": "fixed_time",
+          "timeOfDay": "6:00"
+        },
+        "nextRunAt": "2030-01-01T01:00:00.000Z",
+        "lastRunStatus": "succeeded"
+      }
+    ]
+  },
+  "plan": {
+    "unchanged": "task-4",
+    "unmanaged": []
+  }
+}

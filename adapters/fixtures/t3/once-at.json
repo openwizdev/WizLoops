@@ -1,0 +1,18 @@
+{
+  "list": {
+    "tasks": []
+  },
+  "plan": {
+    "schedule_task": {
+      "title": "One reminder [wizloop:once-at]",
+      "prompt": "[wizloop:once-at] A scheduled run of the loop file adapters/fixtures/t3/once-at.md. Do these steps in order. TIME below means the time now in UTC, as YYYY-MM-DDTHH:MM:SSZ.\n\n1. Do this:\nRemind the owner to read the release notes.\n\n2. Last, append `TIME once-at ok WHAT` to .openwiz/home/once-at/ok.log, where WHAT is one line saying what you did; or, if step 1 failed, `TIME once-at failed WHY`.",
+      "schedule": {
+        "type": "once",
+        "runAt": "2030-01-02T03:04:05-08:00"
+      },
+      "bindToCurrentThread": true,
+      "freshSession": false
+    },
+    "unmanaged": []
+  }
+}

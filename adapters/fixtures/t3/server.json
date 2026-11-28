@@ -1,0 +1,6 @@
+{
+  "now": "2030-01-01T00:00:00Z",
+  "server": {"timeZone": "UTC"},
+  "thread": {"id": "thread-applying", "provider": "example-provider", "model": "example-model", "reasoning": "medium"},
+  "state": ".openwiz/home"
+}

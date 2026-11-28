@@ -1,0 +1,33 @@
+{
+  "list": {
+    "tasks": [
+      {
+        "scheduledTaskId": "task-8",
+        "title": "Hourly kick",
+        "prompt": "Start the example workflow once.",
+        "enabled": true,
+        "projectId": "project-example",
+        "boundThreadId": null,
+        "freshSession": true,
+        "schedule": {
+          "type": "interval",
+          "everyMs": 3600000
+        },
+        "nextRunAt": "2030-01-01T01:00:00.000Z",
+        "lastRunStatus": "succeeded"
+      }
+    ]
+  },
+  "plan": {
+    "refusals": [
+      {
+        "code": "t3-unmarked-match",
+        "field": "id",
+        "message": "an unmarked T3 scheduled task has this name; delete it in T3 or choose another id"
+      }
+    ],
+    "unmanaged": [
+      "task-8"
+    ]
+  }
+}

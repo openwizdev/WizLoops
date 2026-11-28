@@ -1,0 +1,15 @@
+{
+  "list": {
+    "tasks": []
+  },
+  "plan": {
+    "refusals": [
+      {
+        "code": "t3-timezone",
+        "field": "trigger.timezone",
+        "message": "T3 runs a fixed time in its server's time zone, UTC"
+      }
+    ],
+    "unmanaged": []
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "list": {
+    "tasks": []
+  },
+  "plan": {
+    "refusals": [
+      {
+        "code": "t3-webhook-prompt",
+        "field": "params.field",
+        "message": "T3 fills {{...}} in a webhook task's prompt, so the prompt must not hold {{"
+      }
+    ],
+    "unmanaged": []
+  }
+}

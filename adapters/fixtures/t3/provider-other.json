@@ -1,0 +1,15 @@
+{
+  "list": {
+    "tasks": []
+  },
+  "plan": {
+    "refusals": [
+      {
+        "code": "t3-provider",
+        "field": "agent.provider",
+        "message": "a T3 scheduled task runs on the applying thread's provider, model and reasoning, and this is not that thread's"
+      }
+    ],
+    "unmanaged": []
+  }
+}
