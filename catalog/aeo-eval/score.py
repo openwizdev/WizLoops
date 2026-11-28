@@ -1,5 +1,3 @@
-"""Score one recorded answer using the version 1 rules."""
-
 import argparse
 import json
 import re
@@ -71,7 +69,6 @@ def _describes_openwiz(answer):
 
 
 def score_answer(answer, citations=()):
-    """Return the cited, correct and score booleans for answer text and citation URLs."""
     cited = any(
         _is_openwiz_url(match.group())
         for text in (answer, *citations)
@@ -82,7 +79,7 @@ def score_answer(answer, citations=()):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description="Score one recorded answer using the version 1 rules.")
     parser.add_argument("record", help="path to a JSON answer record, or - for standard input")
     args = parser.parse_args()
     try:
