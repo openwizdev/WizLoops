@@ -5,6 +5,8 @@
 
 # WizLoops
 
+Part of [OpenWiz](https://openwiz.dev), the open source agent factory.
+
 **Loops as files: what wakes an [OpenWiz](https://github.com/openwizdev/OpenWiz) factory, and when.** One Markdown file per loop, changed by pull request, so you can review, copy and diff them. OpenWiz reads the files and sets the loops up on your host.
 
 **Status:** [OpenWiz 0.1.0](https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.0) is released, and its `openwiz loop` commands read these files. The format and five starter loops are here, and CI checks them against that release. Cloudroom is the only host so far; more are coming.
