@@ -113,7 +113,7 @@ def read_rules(path):
         elif line.startswith("```"):
             block = []
         elif line.startswith("#"):
-            heading = line.lstrip("#").strip()
+            heading = line.lstrip("#").strip().replace("`", "")
             sections.setdefault(heading, {"rows": [], "blocks": []})
         elif heading is not None and line.startswith("| ") and not line.startswith("| ---"):
             sections[heading]["rows"].append([unquote(c.strip()) for c in line.strip()[2:-2].split(" | ")])
@@ -268,7 +268,7 @@ def t3_plan(rules, fields, body, file_rel, check_text, server, tasks):
         prompt = t3_render(rules["templates"], fields, body, file_rel, check_text, server["state"])
         if schedule == {"type": "webhook"} and "{{" in prompt:
             holders = [n for n in sorted(fields.get("params", {})) if "{{" in str(fields["params"][n])]
-            refuse("t3-webhook-prompt", "params." + holders[0] if holders else "file")
+            refuse("t3-webhook-prompt", "params." + holders[0] if holders else "check.run" if "{{" in fields.get("check", {}).get("run", "") else "file")
     if found:
         order = list(rules["refusals"])
         return {"refusals": sorted(found, key=lambda r: order.index(r["code"])), "unmanaged": unmanaged}

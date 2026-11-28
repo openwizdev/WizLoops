@@ -48,6 +48,8 @@ Ask for a review on each one, once.
 
 Every field, refusal and fixture: [`format/loop.v1.md`](format/loop.v1.md). How each field maps to Cloudroom: [`adapters/cloudroom.v1.md`](adapters/cloudroom.v1.md). What a host can't do exactly is refused and named, never faked. A host gets an adapter only if a loop can wake or message the agent running the factory.
 
+Runners exist beyond Cloudroom: every one follows [the runner contract](adapters/runner.v1.md), and [T3 scheduled tasks](adapters/t3.v1.md) has its rules and fixtures, though `openwiz loop` doesn't run them yet.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/openwizdev/.github/main/profile/art/map-dark.png">
   <img alt="How the repos fit: WizSkills and WizLoops feed OpenWiz, the kernel. OpenWiz drives your agents and machines and writes records to GitHub. WizSite's app reads GitHub, and WizMarket's listings feed that site. WizPlugins holds plugins for the ADEs you use, starting with WizBar. Private records and tools sit apart." src="https://raw.githubusercontent.com/openwizdev/.github/main/profile/art/map-light.png" width="560">
